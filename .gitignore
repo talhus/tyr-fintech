@@ -17,6 +17,7 @@ backend/*.env
 
 backend/api
 backend/main
+backend/README.md
 backend/*.exe
 backend/*.test
 
