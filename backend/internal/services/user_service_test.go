@@ -56,12 +56,26 @@ func TestUserService_Register(t *testing.T) {
 			mockCreateErr: errors.New("db connection failure"),
 			wantErr:       true,
 		},
+		{
+			name:          "UserAlreadyExists",
+			inputName:     "John Doe",
+			inputEmail:    "john@mail.com",
+			inputPassword: "securepassword123",
+			mockCreateErr: nil,
+			wantErr:       true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockRepo := &mockUserRepository{
 				createFunc: func(ctx context.Context, user *models.User) error {
 					return tt.mockCreateErr
+				},
+				getByEmailFunc: func(ctx context.Context, email string) (*models.User, error) {
+					if tt.name == "UserAlreadyExists" {
+						return &models.User{ID: "1", Email: email}, nil
+					}
+					return nil, errors.New("user not found")
 				},
 			}
 			service := services.NewUserService(mockRepo)
