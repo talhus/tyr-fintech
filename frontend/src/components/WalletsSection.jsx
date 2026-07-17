@@ -1,45 +1,24 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import { CreditCard } from 'lucide-react';
-import api from '../lib/axios';
+import { useWallets, useCreateWalletMutation, useDeleteWalletMutation } from '../hooks/useQueries';
 import WalletsGrid from './WalletsGrid';
 import CreateWalletModal from './CreateWalletModal';
 
-export default function WalletsSection({ user, onWalletsFetched, selectedWalletId, onSelectWallet, refreshKey, addToast }) {
-  const [wallets, setWallets] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+export default function WalletsSection({ user, selectedWalletId, onSelectWallet, addToast }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedCurrency, setSelectedCurrency] = useState('');
 
-  const fetchWallets = useCallback(async () => {
-    try {
-      const response = await api.get('/wallets');
-      const loadedWallets = response.data.wallets || [];
-      setWallets(loadedWallets);
-      onWalletsFetched(loadedWallets);
-    } catch (error) {
-      addToast(error.response?.data?.error || 'Failed to fetch wallets', 'error');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [onWalletsFetched, addToast]);
-
-  useEffect(() => {
-    fetchWallets();
-  }, [fetchWallets, refreshKey]);
+  const { data: wallets = [], isLoading } = useWallets();
+  const createWalletMutation = useCreateWalletMutation(addToast);
+  const deleteWalletMutation = useDeleteWalletMutation(addToast);
 
   const handleCreateWallet = async (currency) => {
-    try {
-      await api.post('/wallets', {
-        user_id: user.id,
-        currency,
-      });
-      addToast(`${currency} wallet activated successfully`, 'success');
-      setIsModalOpen(false);
-      setSelectedCurrency('');
-      fetchWallets();
-    } catch (error) {
-      addToast(error.response?.data?.error || 'Failed to activate wallet', 'error');
-    }
+    await createWalletMutation.mutateAsync({
+      userId: user.id,
+      currency,
+    });
+    setIsModalOpen(false);
+    setSelectedCurrency('');
   };
 
   const handleCopy = (text) => {
@@ -49,13 +28,7 @@ export default function WalletsSection({ user, onWalletsFetched, selectedWalletI
 
   const handleDeleteWallet = async (walletId) => {
     if (!window.confirm('Are you sure you want to delete this wallet?')) return;
-    try {
-      await api.delete(`/wallets/${walletId}`);
-      addToast('Wallet deleted successfully', 'success');
-      fetchWallets();
-    } catch (error) {
-      addToast(error.response?.data?.error || 'Failed to delete wallet', 'error');
-    }
+    await deleteWalletMutation.mutateAsync(walletId);
   };
 
   const getCurrencySymbol = (currency) => {

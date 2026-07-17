@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import { ArrowUpRight, ArrowDownLeft, Calendar, Copy, Hash, FileDown } from 'lucide-react';
 import api from '../lib/axios';
+import { useTransactionHistory } from '../hooks/useQueries';
 
 const getCurrencySymbol = (currency) => {
   switch (currency?.toUpperCase()) {
@@ -15,28 +16,9 @@ const getCurrencySymbol = (currency) => {
   }
 };
 
-export default function TransactionHistory({ walletId, currency, refreshKey, addToast }) {
-  const [transactions, setTransactions] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+export default function TransactionHistory({ walletId, currency, addToast }) {
+  const { data: transactions = [], isLoading } = useTransactionHistory(walletId);
   const [isExporting, setIsExporting] = useState(false);
-
-  const fetchHistory = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const response = await api.get(`/transactions/${walletId}`);
-      setTransactions(response.data.data || []);
-    } catch (error) {
-      addToast(error.response?.data?.error || 'Failed to fetch transaction history', 'error');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [walletId, addToast]);
-
-  useEffect(() => {
-    if (walletId) {
-      fetchHistory();
-    }
-  }, [fetchHistory, refreshKey, walletId]);
 
   const handleCopyTxId = (id) => {
     navigator.clipboard.writeText(id);
@@ -56,7 +38,7 @@ export default function TransactionHistory({ walletId, currency, refreshKey, add
 
   const formatAmount = (tx) => {
     const isSent = tx.from_wallet_id?.toLowerCase() === walletId?.toLowerCase();
-    const value = tx.amount / 100;
+    const value = (isSent ? tx.amount : (tx.converted_amount || tx.amount)) / 100;
     const formattedValue = value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const symbol = getCurrencySymbol(currency);
     return isSent ? `-${symbol}${formattedValue}` : `+${symbol}${formattedValue}`;

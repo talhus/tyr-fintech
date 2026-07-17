@@ -40,9 +40,14 @@ export const AuthProvider = ({ children }) => {
       await api.post('/auth/register', { name, email, password });
       return { success: true };
     } catch (error) {
+      const data = error.response?.data;
+      if (data?.errors) {
+        const messages = Object.values(data.errors).join(' ');
+        return { success: false, error: messages };
+      }
       return {
         success: false,
-        error: error.response?.data?.error || "Registration failed"
+        error: data?.error || "Registration failed"
       };
     }
   };

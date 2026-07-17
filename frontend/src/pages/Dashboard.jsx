@@ -1,8 +1,8 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import api from '../lib/axios';
 import { TopBar, TransferForm, ToastContainer, WalletsSection, TransactionHistory } from '../components';
 import { Navigate } from 'react-router-dom';
+import { useWallets, useTransferMutation } from '../hooks/useQueries';
 
 const getCurrencySymbol = (currency) => {
   switch (currency?.toUpperCase()) {
@@ -19,10 +19,11 @@ const getCurrencySymbol = (currency) => {
 
 function Dashboard() {
   const { user, logout } = useAuth();
-  const [wallets, setWallets] = useState([]);
   const [selectedWalletId, setSelectedWalletId] = useState(null);
   const [toasts, setToasts] = useState([]);
-  const [refreshKey, setRefreshKey] = useState(0);
+
+  const { data: wallets = [] } = useWallets();
+  const transferMutation = useTransferMutation((msg, type) => addToast(msg, type));
 
   const removeToast = useCallback((id) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
@@ -36,41 +37,30 @@ function Dashboard() {
     }, 4000);
   }, [removeToast]);
 
-  const handleWalletsFetched = useCallback((loadedWallets) => {
-    setWallets(loadedWallets);
-    setSelectedWalletId((prev) => {
-      if (loadedWallets.length === 0) return null;
-      if (!prev || !loadedWallets.some((w) => w.id === prev)) {
-        return loadedWallets[0].id;
+  // Synchronize selectedWalletId with loaded wallets
+  useEffect(() => {
+    if (wallets.length > 0) {
+      if (!selectedWalletId || !wallets.some((w) => w.id === selectedWalletId)) {
+        setSelectedWalletId(wallets[0].id);
       }
-      return prev;
-    });
-  }, []);
+    } else {
+      setSelectedWalletId(null);
+    }
+  }, [wallets, selectedWalletId]);
 
   const handleTransfer = useCallback(async (fromWalletNumber, toWalletNumber, amount, idempotencyKey) => {
     try {
-      const amountInCents = Math.round(parseFloat(amount) * 100);
-      await api.post(
-        '/transfer',
-        {
-          from_wallet_number: fromWalletNumber,
-          to_wallet_number: toWalletNumber,
-          amount: amountInCents,
-        },
-        {
-          headers: {
-            'X-Idempotency-Key': idempotencyKey,
-          },
-        }
-      );
-      addToast('Transfer completed successfully', 'success');
-      setRefreshKey((prev) => prev + 1);
+      await transferMutation.mutateAsync({
+        fromWalletNumber,
+        toWalletNumber,
+        amount,
+        idempotencyKey,
+      });
       return true;
-    } catch (error) {
-      addToast(error.response?.data?.error || 'Transfer failed', 'error');
+    } catch {
       return false;
     }
-  }, [addToast]);
+  }, [transferMutation]);
 
   if (!user) {
     return <Navigate to="/login" replace />;
@@ -91,10 +81,8 @@ function Dashboard() {
           <div className="lg:col-span-2 space-y-8 animate-slide-up">
             <WalletsSection
               user={user}
-              onWalletsFetched={handleWalletsFetched}
               selectedWalletId={selectedWalletId}
               onSelectWallet={setSelectedWalletId}
-              refreshKey={refreshKey}
               addToast={addToast}
             />
 
@@ -102,7 +90,6 @@ function Dashboard() {
               <TransactionHistory
                 walletId={selectedWalletId}
                 currency={selectedWalletCurrency}
-                refreshKey={refreshKey}
                 addToast={addToast}
               />
             )}

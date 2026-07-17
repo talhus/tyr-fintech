@@ -16,10 +16,12 @@ func RegisterRoutes(r *gin.Engine, userHandler *UserHandler, walletHandler *Wall
 	{
 		authorized.GET("/wallets", walletHandler.GetWallets)
 		authorized.POST("/wallets", walletHandler.Create)
+		authorized.GET("/wallets/verify/:walletID", walletHandler.VerifyWallet)
 		authorized.DELETE("/wallets/:walletID", walletHandler.DeleteWallet)
 		authorized.POST("/transfer", txHandler.Transfer)
 		authorized.GET("/transactions/:walletID", txHandler.GetHistory)
 		authorized.GET("/transactions/:walletID/export", txHandler.ExportHistory)
+		authorized.GET("/exchange-rate", txHandler.GetExchangeRate)
 		authorized.POST("/logout", userHandler.Logout)
 	}
 }

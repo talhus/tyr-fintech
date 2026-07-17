@@ -5,6 +5,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/iamtbay/tyr-fintech/internal/dto"
 	"github.com/iamtbay/tyr-fintech/internal/models"
 	"github.com/iamtbay/tyr-fintech/internal/services"
 )
@@ -14,6 +15,7 @@ type mockWalletRepository struct {
 	funcGetByUserID   func(ctx context.Context, userID string) ([]*models.Wallet, error)
 	funcGetWalletByID func(ctx context.Context, walletID int64) (*models.WalletResponse, error)
 	funcDelete        func(ctx context.Context, userID, walletID string) error
+	funcVerifyWallet  func(ctx context.Context, walletID int64) (*dto.WalletLookUpResult, error)
 }
 
 func (m *mockWalletRepository) Create(ctx context.Context, wallet *models.Wallet) error {
@@ -39,6 +41,12 @@ func (m *mockWalletRepository) Delete(ctx context.Context, userID, walletID stri
 		return m.funcDelete(ctx, userID, walletID)
 	}
 	return nil
+}
+func (m *mockWalletRepository) VerifyWallet(ctx context.Context, walletID int64) (*dto.WalletLookUpResult, error) {
+	if m.funcVerifyWallet != nil {
+		return m.funcVerifyWallet(ctx, walletID)
+	}
+	return nil, nil
 }
 
 // TESTS

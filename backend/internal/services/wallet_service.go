@@ -14,6 +14,7 @@ type WalletRepository interface {
 	GetByUserID(ctx context.Context, userID string) ([]*models.Wallet, error)
 	GetWalletByID(ctx context.Context, walletID int64) (*models.WalletResponse, error)
 	Delete(ctx context.Context, userID, walletID string) error
+	VerifyWallet(ctx context.Context, walletID int64) (*dto.WalletLookUpResult, error)
 }
 
 type WalletService struct {
@@ -24,6 +25,7 @@ func NewWalletService(walletRepo WalletRepository) *WalletService {
 	return &WalletService{walletRepo: walletRepo}
 }
 
+// METHODS
 func (s *WalletService) GetByUserID(ctx context.Context, userID string) ([]*models.Wallet, error) {
 	return s.walletRepo.GetByUserID(ctx, userID)
 }
@@ -44,6 +46,11 @@ func (s *WalletService) CreateWallet(ctx context.Context, req *dto.CreateWallet)
 	return nil
 }
 
+// DELETE WALLET
 func (s *WalletService) DeleteWallet(ctx context.Context, userID string, walletID string) error {
 	return s.walletRepo.Delete(ctx, userID, walletID)
+}
+
+func (s *WalletService) VerifyWallet(ctx context.Context, walletID int64) (*dto.WalletLookUpResult, error) {
+	return s.walletRepo.VerifyWallet(ctx, walletID)
 }

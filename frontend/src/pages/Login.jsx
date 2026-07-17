@@ -20,16 +20,41 @@ function Login() {
     setError('');
     setSuccess('');
 
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError('Please enter a valid email address.');
+      setIsLoading(false);
+      return;
+    }
+
     if (isRegister) {
+      if (name.trim().length < 2) {
+        setError('Full Name must be at least 2 characters long.');
+        setIsLoading(false);
+        return;
+      }
+      if (password.length < 6) {
+        setError('Password must be at least 6 characters long.');
+        setIsLoading(false);
+        return;
+      }
+
       const result = await register(name, email, password);
       if (result.success) {
         setSuccess('Registration successful! Please log in.');
         setIsRegister(false);
         setPassword('');
+        setName('');
       } else {
         setError(result.error || 'Registration failed.');
       }
     } else {
+      if (password.length === 0) {
+        setError('Password is required.');
+        setIsLoading(false);
+        return;
+      }
+
       const result = await login(email, password);
       if (result.success) {
         navigate('/dashboard');

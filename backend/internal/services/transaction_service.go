@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"errors"
+	"math"
 
 	"github.com/iamtbay/tyr-fintech/internal/dto"
 	"github.com/iamtbay/tyr-fintech/internal/models"
@@ -48,7 +49,7 @@ func (s *TransactionService) Transfer(ctx context.Context, req *dto.TransferRequ
 	if err != nil {
 		return err
 	}
-	convertedAmount := int64(float64(req.Amount) * rate)
+	convertedAmount := int64(math.Round(float64(req.Amount) * rate))
 
 	//transfer
 	err = s.repo.Transfer(ctx, req, convertedAmount)
@@ -68,4 +69,9 @@ func (s *TransactionService) Transfer(ctx context.Context, req *dto.TransferRequ
 // GetHistory
 func (s *TransactionService) GetHistory(ctx context.Context, walletID string) ([]*models.Transaction, error) {
 	return s.repo.GetTransactionsByWalletID(ctx, walletID)
+}
+
+// GetExchangeRate
+func (s *TransactionService) GetExchangeRate(ctx context.Context, from, to models.WalletCurrency) (float64, error) {
+	return s.exchangeService.GetRate(ctx, from, to)
 }

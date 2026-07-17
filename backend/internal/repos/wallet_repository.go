@@ -3,8 +3,12 @@ package repos
 import (
 	"context"
 	"errors"
+	"net/http"
 
+	"github.com/iamtbay/tyr-fintech/internal/dto"
 	"github.com/iamtbay/tyr-fintech/internal/models"
+	"github.com/iamtbay/tyr-fintech/pkg/apperrors"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -87,4 +91,24 @@ func (r *WalletRepository) Delete(ctx context.Context, userID, walletID string) 
 		return err
 	}
 	return nil
+}
+
+// VERIFY WALLET
+func (r *WalletRepository) VerifyWallet(ctx context.Context, walletID int64) (*dto.WalletLookUpResult, error) {
+	query := `
+	SELECT u.name, w.currency
+	FROM wallets w
+	JOIN users u ON w.user_id=u.id
+	WHERE w.wallet_number = $1 AND w.deleted_at IS NULL
+	`
+	var walletResult dto.WalletLookUpResult
+	err := r.pool.QueryRow(ctx, query, walletID).Scan(&walletResult.OwnerName, &walletResult.Currency)
+
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, apperrors.New(http.StatusNotFound, "Wallet Not Found")
+		}
+		return nil, apperrors.New(http.StatusInternalServerError, err.Error())
+	}
+	return &walletResult, nil
 }

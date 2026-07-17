@@ -14,6 +14,7 @@ import (
 type TransactionService interface {
 	Transfer(ctx context.Context, req *dto.TransferRequest) error
 	GetHistory(ctx context.Context, walletID string) ([]*models.Transaction, error)
+	GetExchangeRate(ctx context.Context, from, to models.WalletCurrency) (float64, error)
 }
 
 type TransactionHandler struct {
@@ -118,4 +119,19 @@ func (h *TransactionHandler) ExportHistory(c *gin.Context) {
 		return
 	}
 
+}
+
+func (h *TransactionHandler) GetExchangeRate(c *gin.Context) {
+	from := c.Query("from")
+	to := c.Query("to")
+	if from == "" || to == "" {
+		response.Error(c, http.StatusBadRequest, "from and to currencies are required")
+		return
+	}
+	rate, err := h.transactionService.GetExchangeRate(c.Request.Context(), models.WalletCurrency(from), models.WalletCurrency(to))
+	if err != nil {
+		response.Error(c, http.StatusBadRequest, err.Error())
+		return
+	}
+	response.Success(c, http.StatusOK, gin.H{"rate": rate})
 }

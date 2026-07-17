@@ -6,6 +6,10 @@
 *.njsproj
 *.sln
 *.sw?
+#
+futuretasks.md
+skills.md
+skill.md
 
 # Windows / macOS System Files
 Thumbs.db
