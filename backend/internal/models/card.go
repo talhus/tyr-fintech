@@ -22,7 +22,6 @@ type Card struct {
 	SpentAmount int
 	Status      CardStatus
 	CreatedAt   time.Time
-	UpdatedAt   time.Time
 }
 
 //easyjson:json

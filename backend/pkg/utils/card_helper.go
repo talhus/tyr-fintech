@@ -7,17 +7,17 @@ import (
 )
 
 // GENERATE CARD NUMBER
-func GenerateCardNumber() (string, error) {
+func GenerateCardNumber() string {
 	baseNum := "411111"
 	max := big.NewInt(900000000)
 	n, err := rand.Int(rand.Reader, max)
 	if err != nil {
-		return "", err
+		return ""
 	}
 	randomNumber := n.Int64() + 100000000
 	prefix := baseNum + strconv.FormatInt(randomNumber, 10)
 	checkDigit := calculateLuhnCheckDigit(prefix)
-	return prefix + checkDigit, nil
+	return prefix + checkDigit
 }
 
 // Luhn algorithm implementation
@@ -41,12 +41,9 @@ func calculateLuhnCheckDigit(prefix string) string {
 }
 
 // GENERATE CVV
-func GenerateCVV() (string, error) {
+func GenerateCVV() string {
 	max := big.NewInt(900)
-	n, err := rand.Int(rand.Reader, max)
-	if err != nil {
-		return "", err
-	}
+	n, _ := rand.Int(rand.Reader, max)
 	cvv := n.Int64() + 100
-	return strconv.FormatInt(cvv, 10), nil
+	return strconv.FormatInt(cvv, 10)
 }
