@@ -92,3 +92,143 @@ export function useTransferMutation(addToast) {
     },
   });
 }
+
+// Fetch user's virtual cards
+export function useCards() {
+  return useQuery({
+    queryKey: ['cards'],
+    queryFn: async () => {
+      const response = await api.get('/cards');
+      return response.data.data || response.data || [];
+    },
+  });
+}
+
+// Create virtual card mutation
+export function useCreateCardMutation(addToast) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ walletId, limitAmount }) => {
+      const limitInCents = Math.round(parseFloat(limitAmount) * 100);
+      const response = await api.post('/cards', {
+        wallet_id: walletId,
+        limit_amount: limitInCents,
+      });
+      return response.data;
+    },
+    onSuccess: () => {
+      addToast('Virtual card created successfully', 'success');
+      queryClient.invalidateQueries({ queryKey: ['cards'] });
+    },
+    onError: (error) => {
+      addToast(error.response?.data?.error || 'Failed to create card', 'error');
+    },
+  });
+}
+
+// Freeze card mutation
+export function useFreezeCardMutation(addToast) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (cardId) => {
+      const response = await api.post(`/cards/${cardId}/freeze`);
+      return response.data;
+    },
+    onSuccess: () => {
+      addToast('Card frozen successfully', 'info');
+      queryClient.invalidateQueries({ queryKey: ['cards'] });
+    },
+    onError: (error) => {
+      addToast(error.response?.data?.error || 'Failed to freeze card', 'error');
+    },
+  });
+}
+
+// Unfreeze card mutation
+export function useUnfreezeCardMutation(addToast) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (cardId) => {
+      const response = await api.post(`/cards/${cardId}/unfreeze`);
+      return response.data;
+    },
+    onSuccess: () => {
+      addToast('Card unfrozen successfully', 'success');
+      queryClient.invalidateQueries({ queryKey: ['cards'] });
+    },
+    onError: (error) => {
+      addToast(error.response?.data?.error || 'Failed to unfreeze card', 'error');
+    },
+  });
+}
+
+// Close/Delete card mutation
+export function useCloseCardMutation(addToast) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (cardId) => {
+      const response = await api.delete(`/cards/${cardId}`);
+      return response.data;
+    },
+    onSuccess: () => {
+      addToast('Card closed successfully', 'success');
+      queryClient.invalidateQueries({ queryKey: ['cards'] });
+    },
+    onError: (error) => {
+      addToast(error.response?.data?.error || 'Failed to close card', 'error');
+    },
+  });
+}
+
+// Process mock card payment mutation
+export function useProcessCardPaymentMutation(addToast) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ cardId, cardNumber, cvv, expiryMonth, expiryYear, amount, merchantName }) => {
+      const amountInCents = Math.round(parseFloat(amount) * 100);
+      const response = await api.post(`/cards/${cardId}/process-payment`, {
+        card_number: cardNumber,
+        cvv: cvv,
+        expiry_month: parseInt(expiryMonth, 10),
+        expiry_year: parseInt(expiryYear, 10),
+        amount: amountInCents,
+        merchant_name: merchantName || 'Online Merchant',
+      });
+      return response.data;
+    },
+    onSuccess: () => {
+      addToast('Card payment processed successfully', 'success');
+      queryClient.invalidateQueries({ queryKey: ['cards'] });
+      queryClient.invalidateQueries({ queryKey: ['wallets'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['cardTransactions'] });
+    },
+    onError: (error) => {
+      addToast(error.response?.data?.error || 'Payment failed', 'error');
+    },
+  });
+}
+
+// Fetch transactions for a specific virtual card
+export function useCardTransactions(cardId) {
+  return useQuery({
+    queryKey: ['cardTransactions', cardId],
+    queryFn: async () => {
+      const response = await api.get(`/cards/${cardId}/transactions`);
+      return response.data.data || response.data || [];
+    },
+    enabled: !!cardId,
+  });
+}
+
+// Fetch unmasked card details (full card number & CVV)
+export function useCardDetails(cardId, enabled = false) {
+  return useQuery({
+    queryKey: ['cardDetails', cardId],
+    queryFn: async () => {
+      const response = await api.get(`/cards/${cardId}/details`);
+      return response.data.data || response.data;
+    },
+    enabled: enabled && !!cardId,
+  });
+}

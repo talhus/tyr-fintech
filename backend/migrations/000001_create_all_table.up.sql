@@ -19,15 +19,6 @@ CREATE TABLE wallets (
     CONSTRAINT unique_user_currency UNIQUE (user_id, currency,deleted_at)
 );
 
-CREATE TABLE transactions (
-    id UUID PRIMARY KEY,
-    from_wallet_id UUID REFERENCES wallets(id),
-    to_wallet_id UUID REFERENCES wallets(id),
-    amount BIGINT NOT NULL CHECK (amount > 0),
-    status VARCHAR(50) NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'COMPLETED', 'FAILED')),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
 CREATE TABLE idempotency_keys (
     key VARCHAR(255) PRIMARY KEY,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
@@ -47,5 +38,17 @@ CREATE TABLE IF NOT EXISTS cards (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+
+CREATE TABLE transactions (
+    id UUID PRIMARY KEY,
+    from_wallet_id UUID REFERENCES wallets(id),
+    to_wallet_id UUID REFERENCES wallets(id),
+    amount BIGINT NOT NULL CHECK (amount > 0),
+    status VARCHAR(50) NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'COMPLETED', 'FAILED')),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    converted_amount BIGINT DEFAULT NULL,
+    card_id UUID REFERENCES cards(id) DEFAULT NULL,
+    merchant_name VARCHAR(255) DEFAULT NULL
+);
 
 CREATE INDEX IF NOT EXISTS idx_cards_card_number ON cards(card_number);

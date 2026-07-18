@@ -29,35 +29,42 @@ func NewWalletHandler(walletService WalletService) *WalletHandler {
 
 // CREATE WALLET
 func (h *WalletHandler) Create(c *gin.Context) {
+	userID := c.GetString("userID")
+	if userID == "" {
+		response.Error(c, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
 	var req dto.CreateWallet
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		response.Error(c, http.StatusBadRequest, "Invalid request payload: "+err.Error())
 		return
 	}
+	req.UserID = userID
 
 	if err := h.walletService.CreateWallet(c.Request.Context(), &req); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"message": "Wallet created successfully"})
+	response.Success(c, http.StatusCreated, gin.H{"message": "Wallet created successfully"})
 }
 
 // GET WALLETS
 func (h *WalletHandler) GetWallets(c *gin.Context) {
 	userID := c.GetString("userID")
 	if userID == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
+		response.Error(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 
 	wallets, err := h.walletService.GetByUserID(c.Request.Context(), userID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"wallets": wallets})
+	response.Success(c, http.StatusOK, gin.H{"wallets": wallets})
 }
 
 // VERIFY WALLET
@@ -85,18 +92,18 @@ func (h *WalletHandler) VerifyWallet(c *gin.Context) {
 func (h *WalletHandler) DeleteWallet(c *gin.Context) {
 	userID := c.GetString("userID")
 	if userID == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		response.Error(c, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
 	walletId := c.Param("walletID")
 	if walletId == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Bad Request"})
+		response.Error(c, http.StatusBadRequest, "Wallet ID is required")
 		return
 	}
 	if err := h.walletService.DeleteWallet(c.Request.Context(), userID, walletId); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Wallet deleted successfully"})
+	response.Success(c, http.StatusOK, gin.H{"message": "Wallet deleted successfully"})
 }

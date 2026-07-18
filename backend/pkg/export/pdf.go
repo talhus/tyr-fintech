@@ -10,53 +10,165 @@ import (
 )
 
 func TransactionsToPDF(walletID string, transactions []*models.Transaction) ([]byte, error) {
-
 	pdf := gofpdf.New("P", "mm", "A4", "")
+	pdf.SetMargins(10, 15, 10)
+	pdf.SetAutoPageBreak(true, 15)
 	pdf.AddPage()
 
-	//1 App Header
-	pdf.SetFont("Arial", "B", 18)
-	pdf.SetTextColor(59, 130, 246)
-	pdf.CellFormat(190, 10, "Tyr-Fintech", "0", 1, "C", false, 0, "")
+	// 1. BRAND HEADER BANNER
+	// Top primary bar fill (Navy #0F172A)
+	pdf.SetFillColor(15, 23, 42)
+	pdf.Rect(10, 12, 190, 22, "F")
+
+	// App Name
+	pdf.SetFont("Arial", "B", 16)
+	pdf.SetTextColor(255, 255, 255)
+	pdf.SetXY(15, 17)
+	pdf.CellFormat(100, 6, "TYR FINTECH", "0", 0, "L", false, 0, "")
+
+	// Tagline / Statement Title
 	pdf.SetFont("Arial", "B", 12)
-	pdf.SetTextColor(100, 116, 139)
-	pdf.CellFormat(190, 8, "Account Statement", "0", 1, "C", false, 0, "")
-	pdf.Ln(6)
+	pdf.SetTextColor(56, 189, 248) // Light Sky Blue #38BDF8
+	pdf.SetXY(110, 17)
+	pdf.CellFormat(85, 6, "ACCOUNT STATEMENT", "0", 1, "R", false, 0, "")
 
-	//2 Details
-	pdf.SetFont("Arial", "", 10)
-	pdf.SetTextColor(0, 0, 0)
-	pdf.CellFormat(95, 6, fmt.Sprintf("Wallet ID: %s", walletID), "0", 0, "L", false, 0, "")
-	pdf.CellFormat(95, 6, fmt.Sprintf("Generated At: %s", time.Now().Format("2006-01-02 15:04:05")), "0", 1, "R", false, 0, "")
-	pdf.Ln(6)
+	pdf.SetFont("Arial", "", 8)
+	pdf.SetTextColor(148, 163, 184)
+	pdf.SetXY(15, 24)
+	pdf.CellFormat(100, 4, "Digital Banking & Multi-Currency Platform", "0", 0, "L", false, 0, "")
 
-	//3 Table (Grid) Headers
-	pdf.SetFont("Arial", "B", 10)
-	pdf.SetTextColor(241, 245, 249)
+	pdf.SetXY(110, 24)
+	pdf.CellFormat(85, 4, fmt.Sprintf("Issued: %s", time.Now().Format("2006-01-02 15:04:05")), "0", 1, "R", false, 0, "")
 
-	pdf.CellFormat(55, 8, "Transaction ID", "1", 0, "C", true, 0, "")
-	pdf.CellFormat(40, 8, "Sender", "1", 0, "C", true, 0, "")
-	pdf.CellFormat(40, 8, "Receiver", "1", 0, "C", true, 0, "")
-	pdf.CellFormat(25, 8, "Amount", "1", 0, "C", true, 0, "")
-	pdf.CellFormat(30, 8, "Date", "1", 1, "C", true, 0, "")
+	pdf.Ln(10)
 
-	//4 TABLE DATA
-	pdf.SetFont("Arial", "", 9)
-	pdf.SetTextColor(30, 41, 59)
+	// 2. ACCOUNT METADATA & SUMMARY BOX
+	pdf.SetFillColor(248, 250, 252) // Light Gray #F8FAFC
+	pdf.SetDrawColor(226, 232, 240) // Slate #E2E8F0
+	pdf.SetLineWidth(0.3)
+	pdf.Rect(10, 38, 190, 16, "FD")
+
+	pdf.SetFont("Arial", "B", 9)
+	pdf.SetTextColor(51, 65, 85)
+	pdf.SetXY(14, 41)
+	pdf.CellFormat(90, 5, fmt.Sprintf("Wallet Account: %s", walletID), "0", 0, "L", false, 0, "")
+
+	var totalInflow, totalOutflow int64
 	for _, tx := range transactions {
-		amount := tx.Amount
-		if tx.FromWalletID != walletID {
-			amount = tx.ConvertedAmount
+		if tx.FromWalletID == walletID {
+			totalOutflow += tx.Amount
+		} else {
+			totalOutflow += 0
+			totalInflow += tx.ConvertedAmount
 		}
-		//showing only first 8 digit of wallet number for security
-		pdf.CellFormat(55, 8, tx.ID[:8], "1", 0, "C", false, 0, "")
-		pdf.CellFormat(40, 8, fmt.Sprintf("%d", tx.FromWalletNumber), "1", 0, "C", false, 0, "")
-		pdf.CellFormat(40, 8, fmt.Sprintf("%d", tx.ToWalletNumber), "1", 0, "C", false, 0, "")
-		pdf.CellFormat(25, 8, fmt.Sprintf("%d", amount), "1", 0, "R", false, 0, "")
-		pdf.CellFormat(30, 8, tx.CreatedAt.Format("2006-01-02 15:04:05"), "1", 1, "C", false, 0, "")
 	}
 
-	// TRANSFER TO RAM
+	summaryText := fmt.Sprintf("Total Transactions: %d  |  Outflow: -$%.2f", len(transactions), float64(totalOutflow)/100.0)
+	pdf.SetFont("Arial", "", 9)
+	pdf.SetTextColor(71, 85, 105)
+	pdf.SetXY(100, 41)
+	pdf.CellFormat(95, 5, summaryText, "0", 1, "R", false, 0, "")
+
+	pdf.Ln(8)
+
+	// 3. TABLE HEADERS
+	pdf.SetFillColor(30, 41, 59)   // Dark Slate #1E293B
+	pdf.SetTextColor(255, 255, 255) // White text
+	pdf.SetDrawColor(30, 41, 59)
+	pdf.SetFont("Arial", "B", 9)
+
+	pdf.CellFormat(35, 8, " Date & Time", "1", 0, "L", true, 0, "")
+	pdf.CellFormat(30, 8, " Reference ID", "1", 0, "L", true, 0, "")
+	pdf.CellFormat(60, 8, " Description", "1", 0, "L", true, 0, "")
+	pdf.CellFormat(25, 8, " Type", "1", 0, "C", true, 0, "")
+	pdf.CellFormat(40, 8, " Amount", "1", 1, "R", true, 0, "")
+
+	// 4. TABLE ROWS
+	pdf.SetFont("Arial", "", 8.5)
+	pdf.SetDrawColor(226, 232, 240)
+
+	for i, tx := range transactions {
+		isOutflow := tx.FromWalletID == walletID
+
+		// Row background striping
+		if i%2 == 0 {
+			pdf.SetFillColor(255, 255, 255)
+		} else {
+			pdf.SetFillColor(248, 250, 252)
+		}
+
+		// Description logic
+		var description string
+		if tx.MerchantName != nil && *tx.MerchantName != "" {
+			description = fmt.Sprintf("Card: %s", *tx.MerchantName)
+		} else if isOutflow {
+			if tx.ToWalletNumber > 0 {
+				description = fmt.Sprintf("Transfer to #%d", tx.ToWalletNumber)
+			} else {
+				description = "Outbound Payment"
+			}
+		} else {
+			if tx.FromWalletNumber > 0 {
+				description = fmt.Sprintf("Received from #%d", tx.FromWalletNumber)
+			} else {
+				description = "Inbound Transfer"
+			}
+		}
+
+		// Short Tx ID
+		shortID := tx.ID
+		if len(shortID) > 8 {
+			shortID = shortID[:8]
+		}
+
+		// Amount & Type
+		var amountVal float64
+		var typeStr string
+		if isOutflow {
+			amountVal = float64(tx.Amount) / 100.0
+			typeStr = "OUTFLOW"
+		} else {
+			amountVal = float64(tx.ConvertedAmount) / 100.0
+			typeStr = "INFLOW"
+		}
+
+		dateStr := tx.CreatedAt.Format("2006-01-02 15:04")
+
+		// Draw row cells
+		pdf.SetTextColor(71, 85, 105) // Slate text
+		pdf.CellFormat(35, 7, fmt.Sprintf(" %s", dateStr), "1", 0, "L", true, 0, "")
+		pdf.CellFormat(30, 7, fmt.Sprintf(" %s", shortID), "1", 0, "L", true, 0, "")
+		
+		// Truncate description if too long
+		if len(description) > 32 {
+			description = description[:29] + "..."
+		}
+		pdf.CellFormat(60, 7, fmt.Sprintf(" %s", description), "1", 0, "L", true, 0, "")
+
+		// Type color badge
+		if isOutflow {
+			pdf.SetTextColor(225, 29, 72) // Red #E11D48
+		} else {
+			pdf.SetTextColor(16, 185, 129) // Emerald Green #10B981
+		}
+		pdf.CellFormat(25, 7, typeStr, "1", 0, "C", true, 0, "")
+
+		// Amount format
+		if isOutflow {
+			pdf.SetTextColor(225, 29, 72)
+			pdf.CellFormat(40, 7, fmt.Sprintf("-$%.2f ", amountVal), "1", 1, "R", true, 0, "")
+		} else {
+			pdf.SetTextColor(16, 185, 129)
+			pdf.CellFormat(40, 7, fmt.Sprintf("+$%.2f ", amountVal), "1", 1, "R", true, 0, "")
+		}
+	}
+
+	// 5. FOOTER DISCLAIMER
+	pdf.Ln(6)
+	pdf.SetFont("Arial", "I", 7.5)
+	pdf.SetTextColor(148, 163, 184)
+	pdf.CellFormat(190, 5, "This document is an official electronic statement generated by Tyr-Fintech. Confidential.", "0", 1, "C", false, 0, "")
+
 	var buf bytes.Buffer
 	err := pdf.Output(&buf)
 	if err != nil {

@@ -5,9 +5,9 @@ import "time"
 type CardStatus string
 
 const (
-	CardStatusActive CardStatus = "active"
-	CardStatusClosed CardStatus = "closed"
-	CardStatusFrozen CardStatus = "frozen"
+	CardStatusActive CardStatus = "ACTIVE"
+	CardStatusClosed CardStatus = "CLOSED"
+	CardStatusFrozen CardStatus = "FROZEN"
 )
 
 type Card struct {
@@ -18,14 +18,9 @@ type Card struct {
 	CVV         string
 	ExpiryMonth int
 	ExpiryYear  int
-	LimitAmount int
-	SpentAmount int
+	LimitAmount int64
+	SpentAmount int64
 	Status      CardStatus
+	Currency    string
 	CreatedAt   time.Time
-}
-
-//easyjson:json
-type CardCreateRequest struct {
-	WalletID string `json:"wallet_id"`
-	Limit    int    `json:"limit"`
 }

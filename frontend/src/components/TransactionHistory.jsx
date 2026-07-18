@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowUpRight, ArrowDownLeft, Calendar, Copy, Hash, FileDown } from 'lucide-react';
+import { ArrowUpRight, ArrowDownLeft, Calendar, Copy, Hash, FileDown, ShoppingBag } from 'lucide-react';
 import api from '../lib/axios';
 import { useTransactionHistory } from '../hooks/useQueries';
 
@@ -100,9 +100,11 @@ export default function TransactionHistory({ walletId, currency, addToast }) {
       ) : transactions.length === 0 ? (
         <div className="text-white/40 text-sm py-4">No transactions found for this wallet.</div>
       ) : (
-        <div className="space-y-3 max-h-[350px] overflow-y-auto pr-1">
+        <div className="space-y-3 max-h-[350px] overflow-y-auto pr-1 custom-scrollbar">
           {transactions.map((tx) => {
             const isSent = tx.from_wallet_id?.toLowerCase() === walletId?.toLowerCase();
+            const isCardTx = !!(tx.card_id || tx.merchant_name);
+
             return (
               <div 
                 key={tx.id} 
@@ -110,16 +112,32 @@ export default function TransactionHistory({ walletId, currency, addToast }) {
               >
                 <div className="flex items-center gap-3">
                   <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${
-                    isSent ? 'bg-red-500/10 text-red-400' : 'bg-secondary/10 text-secondary'
+                    isCardTx
+                      ? 'bg-amber-500/10 text-amber-400'
+                      : isSent
+                      ? 'bg-red-500/10 text-red-400'
+                      : 'bg-secondary/10 text-secondary'
                   }`}>
-                    {isSent ? <ArrowUpRight className="w-5 h-5" /> : <ArrowDownLeft className="w-5 h-5" />}
+                    {isCardTx ? (
+                      <ShoppingBag className="w-5 h-5" />
+                    ) : isSent ? (
+                      <ArrowUpRight className="w-5 h-5" />
+                    ) : (
+                      <ArrowDownLeft className="w-5 h-5" />
+                    )}
                   </div>
                   <div>
                     <button 
                       onClick={() => handleCopyTxId(tx.id)}
                       className="text-sm font-semibold text-white flex items-center gap-1.5 hover:text-primary transition-colors bg-transparent border-0 cursor-pointer"
                     >
-                      <span>{isSent ? 'Sent' : 'Received'}</span>
+                      <span>
+                        {isCardTx
+                          ? `${tx.merchant_name || 'Card Merchant'} (Virtual Card)`
+                          : isSent
+                          ? 'Sent'
+                          : 'Received'}
+                      </span>
                       <span className="text-xs text-white/30 font-mono">({tx.id.substring(0, 8)})</span>
                       <Copy className="w-3 h-3 text-white/40" />
                     </button>

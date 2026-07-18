@@ -4,7 +4,6 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/google/uuid"
 	"github.com/iamtbay/tyr-fintech/internal/models"
 	"github.com/iamtbay/tyr-fintech/pkg/apperrors"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -20,18 +19,32 @@ func NewCardRepository(db *pgxpool.Pool) *CardRepository {
 
 // CREATE
 func (r *CardRepository) Create(ctx context.Context, card *models.Card) error {
-	query := `INSERT INTO cards (id,user_id,wallet_id,card_number,cvv,expiry_month,expiry_year,limit_amount, spent_amount,status) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`
-	_, err := r.db.Exec(ctx, query,
+	var count int
+	err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM cards WHERE wallet_id = $1 AND status != 'CLOSED'`, card.WalletID).Scan(&count)
+	if err != nil {
+		return err
+	}
+	if count > 0 {
+		return apperrors.New(http.StatusBadRequest, "A virtual card already exists for this wallet")
+	}
+
+	query := `INSERT INTO cards (id, user_id, wallet_id, card_number, cvv, expiry_month, expiry_year, limit_amount, spent_amount,status) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`
+	_, err = r.db.Exec(ctx, query,
 		card.ID, card.UserID, card.WalletID, card.CardNumber, card.CVV, card.ExpiryMonth, card.ExpiryYear, card.LimitAmount, card.SpentAmount, card.Status)
 	if err != nil {
 		return err
 	}
+	_ = r.db.QueryRow(ctx, `SELECT currency FROM wallets WHERE id = $1`, card.WalletID).Scan(&card.Currency)
 	return nil
 }
 
 // GET BY USER ID
 func (r *CardRepository) GetByUserID(ctx context.Context, userID string) ([]models.Card, error) {
-	query := `SELECT id,user_id,wallet_id,card_number,cvv,expiry_month,expiry_year,limit_amount, spent_amount,status,created_at,updated_at FROM cards WHERE user_id = $1`
+	query := `SELECT c.id, c.user_id, c.wallet_id, c.card_number, c.cvv, c.expiry_month, c.expiry_year, c.limit_amount, c.spent_amount, c.status, c.created_at, w.currency 
+	          FROM cards c 
+	          JOIN wallets w ON c.wallet_id = w.id 
+	          WHERE c.user_id = $1 AND c.status != 'CLOSED'
+	          ORDER BY c.created_at ASC`
 	cards := []models.Card{}
 	rows, err := r.db.Query(ctx, query, userID)
 	if err != nil {
@@ -40,7 +53,7 @@ func (r *CardRepository) GetByUserID(ctx context.Context, userID string) ([]mode
 	defer rows.Close()
 	for rows.Next() {
 		card := models.Card{}
-		err := rows.Scan(&card.ID, &card.UserID, &card.WalletID, &card.CardNumber, &card.CVV, &card.ExpiryMonth, &card.ExpiryYear, &card.LimitAmount, &card.SpentAmount, &card.Status, &card.CreatedAt)
+		err := rows.Scan(&card.ID, &card.UserID, &card.WalletID, &card.CardNumber, &card.CVV, &card.ExpiryMonth, &card.ExpiryYear, &card.LimitAmount, &card.SpentAmount, &card.Status, &card.CreatedAt, &card.Currency)
 		if err != nil {
 			return nil, err
 		}
@@ -55,9 +68,57 @@ func (r *CardRepository) UpdateStatus(ctx context.Context, cardID, userID string
 	return err
 }
 
+// GET CARD TRANSACTIONS / SPENDINGS
+func (r *CardRepository) GetCardTransactions(ctx context.Context, cardID, userID string) ([]models.Transaction, error) {
+	query := `SELECT t.id, COALESCE(t.from_wallet_id, '00000000-0000-0000-0000-000000000000'), 
+	                 COALESCE(t.to_wallet_id, '00000000-0000-0000-0000-000000000000'), 
+	                 COALESCE(fw.wallet_number, 0), COALESCE(tw.wallet_number, 0), 
+	                 t.amount, COALESCE(t.converted_amount, t.amount), t.status, t.created_at, 
+	                 t.card_id, COALESCE(t.merchant_name, 'Online Purchase')
+	          FROM transactions t
+	          JOIN cards c ON t.card_id = c.id
+	          LEFT JOIN wallets fw ON t.from_wallet_id = fw.id
+	          LEFT JOIN wallets tw ON t.to_wallet_id = tw.id
+	          WHERE t.card_id = $1 AND c.user_id = $2
+	          ORDER BY t.created_at DESC`
+	rows, err := r.db.Query(ctx, query, cardID, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	transactions := []models.Transaction{}
+	for rows.Next() {
+		var tx models.Transaction
+		var cardIDVal, merchantVal string
+		err := rows.Scan(&tx.ID, &tx.FromWalletID, &tx.ToWalletID, &tx.FromWalletNumber, &tx.ToWalletNumber, &tx.Amount, &tx.ConvertedAmount, &tx.Status, &tx.CreatedAt, &cardIDVal, &merchantVal)
+		if err != nil {
+			return nil, err
+		}
+		tx.CardID = &cardIDVal
+		tx.MerchantName = &merchantVal
+		transactions = append(transactions, tx)
+	}
+	return transactions, nil
+}
+
+// GET UNMASKED CARD DETAILS
+func (r *CardRepository) GetCardDetails(ctx context.Context, cardID, userID string) (*models.Card, error) {
+	query := `SELECT c.id, c.user_id, c.wallet_id, c.card_number, c.cvv, c.expiry_month, c.expiry_year, c.limit_amount, c.spent_amount, c.status, c.created_at, w.currency 
+	          FROM cards c 
+	          JOIN wallets w ON c.wallet_id = w.id 
+	          WHERE c.id = $1 AND c.user_id = $2 AND c.status != 'CLOSED'`
+	card := &models.Card{}
+	err := r.db.QueryRow(ctx, query, cardID, userID).Scan(&card.ID, &card.UserID, &card.WalletID, &card.CardNumber, &card.CVV, &card.ExpiryMonth, &card.ExpiryYear, &card.LimitAmount, &card.SpentAmount, &card.Status, &card.CreatedAt, &card.Currency)
+	if err != nil {
+		return nil, err
+	}
+	return card, nil
+}
+
 //PROCESS PAYMENT
 
-func (r *CardRepository) ProcessPayment(ctx context.Context, cardNumber, cvv string, expiryMonth, expiryYear int, amount int64) error {
+func (r *CardRepository) ProcessPayment(ctx context.Context, transactionID, cardID, cvv string, expiryMonth, expiryYear int, amount int64, merchantName string) error {
 
 	tx, err := r.db.Begin(ctx)
 	if err != nil {
@@ -67,8 +128,8 @@ func (r *CardRepository) ProcessPayment(ctx context.Context, cardNumber, cvv str
 
 	var card models.Card
 	//get card from db
-	query := `SELECT id,wallet_id,limit_amount,spent_amount, status,cvv,expiry_month,expiry_year FROM cards WHERE card_number=$1 FOR UPDATE`
-	err = tx.QueryRow(ctx, query, cardNumber).Scan(&card.ID, &card.WalletID, &card.LimitAmount, &card.SpentAmount, &card.Status, &card.CVV, &card.ExpiryMonth, &card.ExpiryYear)
+	query := `SELECT id,wallet_id,limit_amount,spent_amount, status,cvv,expiry_month,expiry_year FROM cards WHERE id=$1 FOR UPDATE`
+	err = tx.QueryRow(ctx, query, cardID).Scan(&card.ID, &card.WalletID, &card.LimitAmount, &card.SpentAmount, &card.Status, &card.CVV, &card.ExpiryMonth, &card.ExpiryYear)
 	if err != nil {
 		return err
 	}
@@ -82,7 +143,7 @@ func (r *CardRepository) ProcessPayment(ctx context.Context, cardNumber, cvv str
 		return apperrors.New(http.StatusBadRequest, "Invalid card details")
 	}
 	//check if user has enough funds
-	if int(amount)+card.SpentAmount > card.LimitAmount {
+	if amount+card.SpentAmount > card.LimitAmount {
 		return apperrors.New(http.StatusBadRequest, "Limit Exceeded")
 	}
 
@@ -106,7 +167,8 @@ func (r *CardRepository) ProcessPayment(ctx context.Context, cardNumber, cvv str
 	if err != nil {
 		return err
 	}
-	_, err = tx.Exec(ctx, `INSERT INTO transactions(id,from_wallet_id,to_wallet_id,amount,status) VALUES($1,$2,$3,$4,$5)`, uuid.New().String(), card.WalletID, nil, amount, models.StatusCompleted)
+	_, err = tx.Exec(ctx, `INSERT INTO transactions(id, from_wallet_id, to_wallet_id, amount, status, card_id, merchant_name) VALUES($1, $2, $3, $4, $5, $6, $7)`,
+		transactionID, card.WalletID, nil, amount, models.StatusCompleted, card.ID, merchantName)
 	if err != nil {
 		return err
 	}

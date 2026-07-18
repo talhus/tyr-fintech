@@ -19,5 +19,7 @@ type Transaction struct {
 	Amount           int64             `db:"amount" json:"amount"`
 	ConvertedAmount  int64             `db:"converted_amount" json:"converted_amount"`
 	Status           TransactionStatus `db:"status" json:"status" validate:"oneof=PENDING COMPLETED FAILED"`
+	CardID           *string           `db:"card_id" json:"card_id,omitempty"`
+	MerchantName     *string           `db:"merchant_name" json:"merchant_name,omitempty"`
 	CreatedAt        time.Time         `db:"created_at" json:"created_at"`
 }

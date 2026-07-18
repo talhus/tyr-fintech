@@ -9,24 +9,39 @@ import (
 )
 
 func TransactionsToCSV(transactions []*models.Transaction) ([]byte, error) {
-	//create a buffer to write the CSV data to ram
 	var buf bytes.Buffer
 	writer := csv.NewWriter(&buf)
 
 	headers := []string{
-		"Transaction ID", "Sender", "Receiver", "Amount", "Converted Amount", "Status", "Date",
+		"Transaction ID", "Sender Wallet", "Receiver Wallet", "Description", "Amount", "Converted Amount", "Status", "Date",
 	}
 	if err := writer.Write(headers); err != nil {
 		return nil, err
 	}
 
 	for _, tx := range transactions {
+		description := "Transfer"
+		if tx.MerchantName != nil && *tx.MerchantName != "" {
+			description = fmt.Sprintf("Card: %s", *tx.MerchantName)
+		}
+
+		sender := fmt.Sprintf("%d", tx.FromWalletNumber)
+		if tx.FromWalletNumber == 0 {
+			sender = "N/A"
+		}
+
+		receiver := fmt.Sprintf("%d", tx.ToWalletNumber)
+		if tx.ToWalletNumber == 0 {
+			receiver = "N/A"
+		}
+
 		row := []string{
 			tx.ID,
-			fmt.Sprintf("%d", tx.FromWalletNumber),
-			fmt.Sprintf("%d", tx.ToWalletNumber),
-			fmt.Sprintf("%d", tx.Amount),
-			fmt.Sprintf("%d", tx.ConvertedAmount),
+			sender,
+			receiver,
+			description,
+			fmt.Sprintf("%.2f", float64(tx.Amount)/100.0),
+			fmt.Sprintf("%.2f", float64(tx.ConvertedAmount)/100.0),
 			string(tx.Status),
 			tx.CreatedAt.Format("2006-01-02 15:04:05"),
 		}

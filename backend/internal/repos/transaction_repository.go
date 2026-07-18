@@ -91,14 +91,16 @@ func (r *TransactionRepository) GetTransactionsByWalletID(ctx context.Context, w
 	query := `
 		SELECT 
 		t.id,
-		t.from_wallet_id,
-		t.to_wallet_id,
-		w_from.wallet_number as from_wallet_number,
-		w_to.wallet_number as to_wallet_number,
+		COALESCE(t.from_wallet_id, '00000000-0000-0000-0000-000000000000'),
+		COALESCE(t.to_wallet_id, '00000000-0000-0000-0000-000000000000'),
+		COALESCE(w_from.wallet_number, 0) as from_wallet_number,
+		COALESCE(w_to.wallet_number, 0) as to_wallet_number,
 		t.amount,
 		COALESCE(t.converted_amount, t.amount) as converted_amount,
 		t.status,
-		t.created_at
+		t.created_at,
+		COALESCE(t.card_id, '00000000-0000-0000-0000-000000000000') as card_id,
+		COALESCE(t.merchant_name, '') as merchant_name
 		FROM transactions t
 		LEFT JOIN wallets w_from ON t.from_wallet_id = w_from.id
 		LEFT JOIN wallets w_to ON t.to_wallet_id=w_to.id
@@ -114,9 +116,16 @@ func (r *TransactionRepository) GetTransactionsByWalletID(ctx context.Context, w
 	var transactions []*models.Transaction
 	for rows.Next() {
 		var t models.Transaction
-		err := rows.Scan(&t.ID, &t.FromWalletID, &t.ToWalletID, &t.FromWalletNumber, &t.ToWalletNumber, &t.Amount, &t.ConvertedAmount, &t.Status, &t.CreatedAt)
+		var cardIDVal, merchantVal string
+		err := rows.Scan(&t.ID, &t.FromWalletID, &t.ToWalletID, &t.FromWalletNumber, &t.ToWalletNumber, &t.Amount, &t.ConvertedAmount, &t.Status, &t.CreatedAt, &cardIDVal, &merchantVal)
 		if err != nil {
 			return nil, err
+		}
+		if cardIDVal != "00000000-0000-0000-0000-000000000000" && cardIDVal != "" {
+			t.CardID = &cardIDVal
+		}
+		if merchantVal != "" {
+			t.MerchantName = &merchantVal
 		}
 		transactions = append(transactions, &t)
 	}

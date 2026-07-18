@@ -28,6 +28,7 @@ func main() {
 	userRepo := repos.NewUserRepository(pool.DB)
 	walletRepo := repos.NewWalletRepository(pool.DB)
 	transactionRepo := repos.NewTransactionRepository(pool.DB)
+	cardRepo := repos.NewCardRepository(pool.DB)
 
 	// Initialize services
 	userService := services.NewUserService(userRepo)
@@ -36,11 +37,13 @@ func main() {
 	exchangeService := services.NewMockExchangeService()
 	//transaction service
 	transactionService := services.NewTransactionService(transactionRepo, exchangeService, walletRepo)
+	cardService := services.NewCardService(cardRepo)
 
 	// Initialize handlers
 	userHandler := handlers.NewUserHandler(userService)
 	walletHandler := handlers.NewWalletHandler(walletService)
 	transactionHandler := handlers.NewTransactionHandler(transactionService)
+	cardHandler := handlers.NewCardHandler(cardService)
 
 	// Setup Gin router
 	r := gin.Default()
@@ -60,7 +63,7 @@ func main() {
 		c.Next()
 	})
 
-	handlers.RegisterRoutes(r, userHandler, walletHandler, transactionHandler)
+	handlers.RegisterRoutes(r, userHandler, walletHandler, transactionHandler, cardHandler)
 
 	// Start Gin HTTP server
 	log.Println("Starting Gin server on :8080...")

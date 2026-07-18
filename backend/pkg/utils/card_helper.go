@@ -47,3 +47,11 @@ func GenerateCVV() string {
 	cvv := n.Int64() + 100
 	return strconv.FormatInt(cvv, 10)
 }
+
+func MaskCardNumber(cardNumber string) string {
+	if len(cardNumber) < 16 {
+		return cardNumber
+	}
+	// return 6 first digits + "******" + last 4 digits
+	return cardNumber[:6] + "******" + cardNumber[12:]
+}

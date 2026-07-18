@@ -1,6 +1,6 @@
 # Tyr Fintech
 
-Tyr Fintech is a modern, high-performance, and secure multi-currency digital wallet application. It features a robust **Go (Gin-gonic)** backend that guarantees transaction consistency, and a beautiful, custom **glassmorphic React SPA** frontend.
+Tyr Fintech is a modern, high-performance, and secure multi-currency digital wallet and virtual card application. It features a robust **Go (Gin-gonic)** backend that guarantees transaction consistency and ACID compliance, paired with a custom **glassmorphic React SPA** frontend powered by **TanStack Query**.
 
 ---
 
@@ -15,8 +15,10 @@ Tyr Fintech is a modern, high-performance, and secure multi-currency digital wal
 
 ### Frontend
 * **Build System**: Vite (lightning-fast HMR and building)
-* **Framework**: React (functional components, contexts, hooks)
+* **Framework**: React 19 (functional components, contexts, custom hooks)
+* **Server State Management**: TanStack Query (React Query v5 for caching and reactive UI invalidation)
 * **Styling**: Tailwind CSS v4 (responsive utility-first layout, custom glassmorphism design system)
+* **Icons**: Lucide React
 * **API Client**: Axios (configured with credentials and global interceptors)
 
 ### DevOps & CI/CD
@@ -25,23 +27,33 @@ Tyr Fintech is a modern, high-performance, and secure multi-currency digital wal
 
 ---
 
-## 🔒 Key Design & Security Features
+## 🔒 Key Design & Features
 
-1. **Transaction Integrity (ACID)**:
-   - Implements **pessimistic row-level locking (`FOR UPDATE`)** in Go transactions when updating wallet balances.
-   - Prevents **"Lost Update"** problems and guarantees money transfer reliability during high concurrency.
-2. **Idempotency Protection**:
-   - The `/transfer` endpoint accepts an optional `X-Idempotency-Key` header.
-   - Prevents duplicate requests (e.g., due to client double-clicking or network retries) from triggering multiple transfers.
-3. **Multi-Currency Safety**:
-   - Stored in `BIGINT` (representing money in minor units/cents) to avoid floating-point rounding errors.
-   - Constraint checks enforce `balance >= 0` to prevent overdrafts.
-4. **JWT Auth via HttpOnly Cookies**:
-   - User authentication state is managed securely with JSON Web Tokens (JWT) stored in HTTP-Only, Secure cookies to prevent XSS-based token theft.
-5. **Robust Error Handling**:
-   - Custom `AppError` wrapper maps app-specific database and transaction errors to corresponding HTTP status codes cleanly.
-6. **Data Export**:
-   - Download transaction statements on-demand as either **CSV** or **PDF** files directly from the wallet dashboard.
+1. **Virtual Card Ecosystem**:
+   * Issue virtual Visa/Mastercards directly linked to specific wallet balances (enforced **1 card limit per wallet currency**).
+   * Freeze/Unfreeze cards instantly to restrict unauthorized usage.
+   * View card spendings and process test merchant payments on demand.
+   * View masked card numbers by default with secure unmasking (`CVV` and 16-digit card number) upon user request.
+   * Interactive single-card sliding carousel UI.
+
+2. **Transaction Integrity (ACID)**:
+   * Implements **pessimistic row-level locking (`FOR UPDATE`)** in Go transactions when updating wallet balances.
+   * Prevents **"Lost Update"** concurrency bugs during simultaneous transfers or card payments.
+
+3. **Idempotency Protection**:
+   * The `/transfer` endpoint accepts an `X-Idempotency-Key` header.
+   * Prevents duplicate requests (e.g., due to network retries or double clicks) from executing multiple transfers.
+
+4. **Dynamic Exchange Rates & Destination Lookup**:
+   * Automatic 500ms debounced recipient verification when typing destination wallet numbers.
+   * Live exchange rate calculations (`GET /exchange-rate`) displaying exact recipient amounts.
+
+5. **JWT Auth via HttpOnly Cookies**:
+   * Secure authentication with JSON Web Tokens (JWT) stored in HTTP-Only, Secure cookies to prevent XSS token theft.
+
+6. **Executive PDF & CSV Statement Exports**:
+   * Download sleek, executive account statements formatted as **PDF** or **CSV**.
+   * Features branded header banners, transaction summaries, decimal currency formatting, and card merchant descriptions.
 
 ---
 
@@ -53,22 +65,24 @@ Tyr Fintech is a modern, high-performance, and secure multi-currency digital wal
 ├── backend/                 # Backend source code
 │   ├── cmd/api/             # App entrypoint (main.go)
 │   ├── internal/            # Core business logic
-│   │   ├── db/              # Postgres connections and sequencers
+│   │   ├── db/              # Postgres connections and pool configuration
 │   │   ├── dto/             # Request/Response Data Transfer Objects
-│   │   ├── handlers/        # Gin controllers and routers
+│   │   ├── handlers/        # Gin controllers and router definitions
 │   │   ├── middleware/      # Auth and CORS middlewares
-│   │   ├── models/          # Relational struct models
-│   │   ├── repos/           # Database access layer (SQL queries)
+│   │   ├── models/          # Relational struct models (Wallet, Card, Transaction)
+│   │   ├── repos/           # Database access layer (SQL queries and transactions)
+│   │   ├── services/        # Business logic (Cards, Exchange rates, Transfers)
 │   │   └── worker/          # Asynchronous webhook queues/workers
 │   ├── migrations/          # Up/Down SQL schema migrations
-│   ├── pkg/                 # Common helpers (apperrors, JWT, response, export)
+│   ├── pkg/                 # Common helpers (apperrors, JWT, response, PDF/CSV export)
 │   ├── Dockerfile           # Multistage backend container build
-│   └── docker-compose.yml   # Docker compose configuration (DB only/Local Dev)
+│   └── docker-compose.yml   # Docker compose configuration for local dev DB
 ├── frontend/                # Frontend source code
 │   ├── public/              # Static assets
 │   ├── src/                 # React frontend source files
-│   │   ├── components/      # UI components (forms, wallet grids)
+│   │   ├── components/      # UI components (CardsSection, TransferForm, SpendingsModal)
 │   │   ├── context/         # Auth state providers
+│   │   ├── hooks/           # TanStack Query custom hooks (useQueries.js)
 │   │   ├── lib/             # Axios API config
 │   │   └── pages/           # Pages (Dashboard, Login, Register)
 │   ├── Dockerfile           # Multistage frontend build served via Nginx
@@ -88,7 +102,7 @@ Build and spin up the entire application stack (PostgreSQL + Backend + Frontend)
    ```bash
    docker compose up --build -d
    ```
-3. Run the database migrations to set up the tables:
+3. Run the database migrations to set up tables:
    ```bash
    cd backend
    make migrate-up
@@ -124,7 +138,7 @@ Build and spin up the entire application stack (PostgreSQL + Backend + Frontend)
    ```bash
    go run cmd/api/main.go
    ```
-   *Backend is now serving requests on `http://localhost:8080`.*
+   *Backend serves requests on `http://localhost:8080`.*
 
 #### 3. Run the Frontend
 1. Open a new terminal and navigate to the frontend:
@@ -139,7 +153,7 @@ Build and spin up the entire application stack (PostgreSQL + Backend + Frontend)
    ```bash
    npm run dev
    ```
-   *Frontend is now running on [http://localhost:3000](http://localhost:3000).*
+   *Frontend is running on [http://localhost:3000](http://localhost:3000).*
 
 ---
 
@@ -162,9 +176,21 @@ go test -v ./...
 ### Wallets
 * **`GET /api/v1/wallets`** (Protected): Retrieves all wallets owned by the authenticated user.
 * **`POST /api/v1/wallets`** (Protected): Activates/Creates a new wallet for a specified currency (`TRY`, `USD`, or `EUR`).
-* **`DELETE /api/v1/wallets/:walletID`** (Protected): Deletes the specified wallet.
+* **`GET /api/v1/wallets/verify/:walletID`** (Protected): Verifies wallet number existence and owner details.
+* **`DELETE /api/v1/wallets/:walletID`** (Protected): Soft deletes the specified wallet.
+
+### Virtual Cards
+* **`GET /api/v1/cards`** (Protected): Retrieves all virtual cards owned by the user.
+* **`POST /api/v1/cards`** (Protected): Issues a new virtual card linked to a wallet (Limit 1 per wallet currency).
+* **`GET /api/v1/cards/:cardID/details`** (Protected): Retrieves unmasked 16-digit card number and CVV.
+* **`GET /api/v1/cards/:cardID/transactions`** (Protected): Retrieves spendings history for the specified card.
+* **`POST /api/v1/cards/:cardID/freeze`** (Protected): Freezes the card.
+* **`POST /api/v1/cards/:cardID/unfreeze`** (Protected): Activates/unfreezes the card.
+* **`DELETE /api/v1/cards/:cardID`** (Protected): Terminates/closes the card.
+* **`POST /api/v1/cards/:cardID/process-payment`** (Protected): Processes a merchant transaction against the card.
 
 ### Transfers & History
 * **`POST /api/v1/transfer`** (Protected): Initiates money transfer between wallets with idempotency checking.
+* **`GET /api/v1/exchange-rate`** (Protected): Retrieves live conversion exchange rates.
 * **`GET /api/v1/transactions/:walletID`** (Protected): Retrieves transaction logs for the wallet.
-* **`GET /api/v1/transactions/:walletID/export`** (Protected): Exports the transaction logs. Query param `format` accepts `csv` or `pdf`.
+* **`GET /api/v1/transactions/:walletID/export`** (Protected): Exports transaction statements (`?format=pdf` or `?format=csv`).
