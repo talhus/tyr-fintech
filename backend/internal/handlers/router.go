@@ -1,17 +1,28 @@
 package handlers
 
 import (
+	"time"
+
 	"github.com/gin-gonic/gin"
 	"github.com/iamtbay/tyr-fintech/internal/middleware"
 )
 
 func RegisterRoutes(r *gin.Engine, userHandler *UserHandler, walletHandler *WalletHandler, txHandler *TransactionHandler, cardHandler *CardHandler) {
-	// Public routes
-	r.POST("/api/v1/auth/register", userHandler.Register)
-	r.POST("/api/v1/auth/login", userHandler.Login)
+	// Rate Limiters
+	authLimiter := middleware.RateLimit(5, time.Minute)   // Strict limit for login/register to prevent brute force
+	apiLimiter := middleware.RateLimit(100, time.Minute) // Standard limit for API endpoints
+
+	// Public auth routes with strict rate limiting
+	authGroup := r.Group("/api/v1/auth")
+	authGroup.Use(authLimiter)
+	{
+		authGroup.POST("/register", userHandler.Register)
+		authGroup.POST("/login", userHandler.Login)
+	}
 
 	// Protected routes group
 	authorized := r.Group("/api/v1")
+	authorized.Use(apiLimiter)
 	authorized.Use(middleware.AuthRequired())
 	{
 		//wallets

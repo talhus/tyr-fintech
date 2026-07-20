@@ -9,6 +9,6 @@ type CreateWallet struct {
 }
 
 type WalletLookUpResult struct {
-	OwnerName string
-	Currency  models.WalletCurrency
+	OwnerName string                `json:"owner_name"`
+	Currency  models.WalletCurrency `json:"currency"`
 }
