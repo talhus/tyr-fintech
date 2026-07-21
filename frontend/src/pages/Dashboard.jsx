@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { TopBar, TransferForm, ToastContainer, WalletsSection, TransactionHistory, CardsSection } from '../components';
 import { Navigate } from 'react-router-dom';
 import { useWallets, useTransferMutation, useCards } from '../hooks/useQueries';
+import { useNotificationStream } from '../hooks/useNotificationStream';
 import { Send, CreditCard } from 'lucide-react';
 
 const getCurrencySymbol = (currency) => {
@@ -24,10 +25,6 @@ function Dashboard() {
   const [activeTab, setActiveTab] = useState('transfer'); // 'transfer' or 'cards'
   const [toasts, setToasts] = useState([]);
 
-  const { data: wallets = [] } = useWallets();
-  const { data: cards = [] } = useCards();
-  const transferMutation = useTransferMutation((msg, type) => addToast(msg, type));
-
   const removeToast = useCallback((id) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
@@ -39,6 +36,12 @@ function Dashboard() {
       removeToast(id);
     }, 4000);
   }, [removeToast]);
+
+  const { notifications, unreadCount, markAllAsRead, clearNotifications } = useNotificationStream(addToast);
+
+  const { data: wallets = [] } = useWallets();
+  const { data: cards = [] } = useCards();
+  const transferMutation = useTransferMutation((msg, type) => addToast(msg, type));
 
   // Synchronize selectedWalletId with loaded wallets
   useEffect(() => {
@@ -76,7 +79,14 @@ function Dashboard() {
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-primary/20 blur-[120px] pointer-events-none" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-accent/20 blur-[120px] pointer-events-none" />
 
-      <TopBar user={user} onLogout={logout} />
+      <TopBar 
+        user={user} 
+        onLogout={logout} 
+        notifications={notifications}
+        unreadCount={unreadCount}
+        onMarkAllAsRead={markAllAsRead}
+        onClearNotifications={clearNotifications}
+      />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

@@ -118,60 +118,75 @@ func (r *CardRepository) GetCardDetails(ctx context.Context, cardID, userID stri
 
 //PROCESS PAYMENT
 
-func (r *CardRepository) ProcessPayment(ctx context.Context, transactionID, cardID, cvv string, expiryMonth, expiryYear int, amount int64, merchantName string) error {
+func (r *CardRepository) ProcessPayment(ctx context.Context, transactionID, cardID, cvv string, expiryMonth, expiryYear int, amount int64, merchantName string) (*models.CardPaymentResult, error) {
 
 	tx, err := r.db.Begin(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer tx.Rollback(ctx)
 
 	var card models.Card
-	//get card from db
-	query := `SELECT id,wallet_id,limit_amount,spent_amount, status,cvv,expiry_month,expiry_year FROM cards WHERE id=$1 FOR UPDATE`
-	err = tx.QueryRow(ctx, query, cardID).Scan(&card.ID, &card.WalletID, &card.LimitAmount, &card.SpentAmount, &card.Status, &card.CVV, &card.ExpiryMonth, &card.ExpiryYear)
+	var userEmail, userName string
+	// get card and user details from db
+	query := `SELECT c.id, c.user_id, u.email, u.name, c.wallet_id, c.limit_amount, c.spent_amount, c.status, c.cvv, c.expiry_month, c.expiry_year 
+	          FROM cards c 
+	          JOIN users u ON c.user_id = u.id 
+	          WHERE c.id = $1 FOR UPDATE`
+	err = tx.QueryRow(ctx, query, cardID).Scan(&card.ID, &card.UserID, &userEmail, &userName, &card.WalletID, &card.LimitAmount, &card.SpentAmount, &card.Status, &card.CVV, &card.ExpiryMonth, &card.ExpiryYear)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	//check if card is active
+	// check if card is active
 	if card.Status != models.CardStatusActive {
-		return apperrors.New(http.StatusBadRequest, "Card is not active")
+		return nil, apperrors.New(http.StatusBadRequest, "Card is not active")
 	}
-	//check if card details are valid
+	// check if card details are valid
 	if card.CVV != cvv || card.ExpiryMonth != expiryMonth || card.ExpiryYear != expiryYear {
-		return apperrors.New(http.StatusBadRequest, "Invalid card details")
+		return nil, apperrors.New(http.StatusBadRequest, "Invalid card details")
 	}
-	//check if user has enough funds
+	// check if user has enough funds
 	if amount+card.SpentAmount > card.LimitAmount {
-		return apperrors.New(http.StatusBadRequest, "Limit Exceeded")
+		return nil, apperrors.New(http.StatusBadRequest, "Limit Exceeded")
 	}
 
-	//get wallet balance
+	// get wallet balance
 	var walletBalance int64
 	err = tx.QueryRow(ctx, `SELECT balance FROM wallets WHERE id=$1 FOR UPDATE`, card.WalletID).Scan(&walletBalance)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	//check wallet has enough balance
+	// check wallet has enough balance
 	if walletBalance < amount {
-		return apperrors.New(http.StatusBadRequest, "Insufficient funds")
+		return nil, apperrors.New(http.StatusBadRequest, "Insufficient funds")
 	}
 
-	//update spent_amount
+	// update spent_amount and balance
 	_, err = tx.Exec(ctx, `UPDATE wallets SET balance=balance-$1 WHERE id=$2`, amount, card.WalletID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	_, err = tx.Exec(ctx, `UPDATE cards SET spent_amount=spent_amount+$1 WHERE id=$2`, amount, card.ID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	_, err = tx.Exec(ctx, `INSERT INTO transactions(id, from_wallet_id, to_wallet_id, amount, status, card_id, merchant_name) VALUES($1, $2, $3, $4, $5, $6, $7)`,
 		transactionID, card.WalletID, nil, amount, models.StatusCompleted, card.ID, merchantName)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return tx.Commit(ctx)
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
+	}
 
+	return &models.CardPaymentResult{
+		TransactionID: transactionID,
+		UserID:        card.UserID,
+		UserEmail:     userEmail,
+		UserName:      userName,
+		MerchantName:  merchantName,
+		Amount:        amount,
+	}, nil
 }
+

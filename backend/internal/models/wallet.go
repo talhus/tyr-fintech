@@ -10,10 +10,11 @@ type Wallet struct {
 	CreatedAt    time.Time      `db:"created_at" json:"created_at"`
 	WalletNumber int64          `db:"wallet_number" json:"wallet_number"`
 }
-
 type WalletResponse struct {
-	Balance      int64          `db:"balance" json:"balance"`
-	Currency     WalletCurrency `db:"currency" json:"currency"`
+	UserID    string         `db:"user_id" json:"user_id"`
+	UserEmail string         `db:"email" json:"email"`
+	Balance   int64          `db:"balance" json:"balance"`
+	Currency  WalletCurrency `db:"currency" json:"currency"`
 }
 
 type WalletCurrency string

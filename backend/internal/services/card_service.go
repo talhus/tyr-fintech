@@ -2,10 +2,12 @@ package services
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/iamtbay/tyr-fintech/internal/models"
+	"github.com/iamtbay/tyr-fintech/internal/notifications"
 	"github.com/iamtbay/tyr-fintech/pkg/utils"
 )
 
@@ -15,15 +17,16 @@ type CardRepository interface {
 	GetCardDetails(ctx context.Context, cardID, userID string) (*models.Card, error)
 	UpdateStatus(ctx context.Context, cardID, userID string, status models.CardStatus) error
 	GetCardTransactions(ctx context.Context, cardID, userID string) ([]models.Transaction, error)
-	ProcessPayment(ctx context.Context, transactionID, cardID, cvv string, expiryMonth, expiryYear int, amount int64, merchantName string) error
+	ProcessPayment(ctx context.Context, transactionID, cardID, cvv string, expiryMonth, expiryYear int, amount int64, merchantName string) (*models.CardPaymentResult, error)
 }
 
 type CardService struct {
-	repo CardRepository
+	repo                CardRepository
+	notificationService NotificationService
 }
 
-func NewCardService(cardRepo CardRepository) *CardService {
-	return &CardService{repo: cardRepo}
+func NewCardService(cardRepo CardRepository, notificationService NotificationService) *CardService {
+	return &CardService{repo: cardRepo, notificationService: notificationService}
 }
 
 // METHODS
@@ -77,5 +80,22 @@ func (s *CardService) ProcessPayment(ctx context.Context, cardID, cvv string, ex
 	if merchantName == "" {
 		merchantName = "Online Merchant"
 	}
-	return transactionID, s.repo.ProcessPayment(ctx, transactionID, cardID, cvv, expiryMonth, expiryYear, amount, merchantName)
+	paymentResult, err := s.repo.ProcessPayment(ctx, transactionID, cardID, cvv, expiryMonth, expiryYear, amount, merchantName)
+	if err != nil {
+		return "", err
+	}
+
+	if s.notificationService != nil && paymentResult != nil {
+		formattedAmount := fmt.Sprintf("%.2f", float64(amount)/100.0)
+		s.notificationService.NotifyUser(&notifications.NotificationEvent{
+			UserID:      paymentResult.UserID,
+			TargetEmail: paymentResult.UserEmail,
+			Title:       "Card Payment Successful",
+			Message:     "Payment of " + formattedAmount + " to " + merchantName + " was processed successfully.",
+			Type:        "CARD_PAYMENT",
+		})
+	}
+
+	return transactionID, nil
 }
+

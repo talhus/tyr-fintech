@@ -3,16 +3,21 @@ package services
 import (
 	"context"
 	"errors"
+	"fmt"
 	"math"
 
 	"github.com/iamtbay/tyr-fintech/internal/dto"
 	"github.com/iamtbay/tyr-fintech/internal/models"
+	"github.com/iamtbay/tyr-fintech/internal/notifications"
 	"github.com/iamtbay/tyr-fintech/internal/worker"
 )
 
 // ExhangeService interface
 type ExhangeService interface {
 	GetRate(ctx context.Context, from, to models.WalletCurrency) (float64, error)
+}
+type NotificationService interface {
+	NotifyUser(event *notifications.NotificationEvent)
 }
 
 type TransactionRepository interface {
@@ -21,13 +26,14 @@ type TransactionRepository interface {
 }
 
 type TransactionService struct {
-	repo            TransactionRepository
-	exchangeService ExhangeService
-	walletRepo      WalletRepository
+	repo                TransactionRepository
+	exchangeService     ExhangeService
+	walletRepo          WalletRepository
+	notificationService NotificationService
 }
 
-func NewTransactionService(repo TransactionRepository, exchangeService ExhangeService, walletRepo WalletRepository) *TransactionService {
-	return &TransactionService{repo: repo, exchangeService: exchangeService, walletRepo: walletRepo}
+func NewTransactionService(repo TransactionRepository, exchangeService ExhangeService, walletRepo WalletRepository, notificationService NotificationService) *TransactionService {
+	return &TransactionService{repo: repo, exchangeService: exchangeService, walletRepo: walletRepo, notificationService: notificationService}
 }
 
 // Transfer
@@ -62,6 +68,17 @@ func (s *TransactionService) Transfer(ctx context.Context, req *dto.TransferRequ
 		ToWalletNumber:   req.ToWalletNumber,
 		Amount:           req.Amount,
 		Status:           "COMPLETED",
+	}
+
+	if s.notificationService != nil {
+		formattedAmount := fmt.Sprintf("%.2f", float64(convertedAmount)/100.0)
+		s.notificationService.NotifyUser(&notifications.NotificationEvent{
+			UserID:      receiver.UserID,
+			TargetEmail: receiver.UserEmail,
+			Title:       "Money Received",
+			Message:     "You have received " + formattedAmount + " " + string(receiver.Currency),
+			Type:        "TRANSACTION",
+		})
 	}
 	return nil
 }

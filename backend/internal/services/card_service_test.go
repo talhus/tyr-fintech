@@ -14,7 +14,7 @@ type mockCardRepository struct {
 	getCardDetailsFunc      func(ctx context.Context, cardID, userID string) (*models.Card, error)
 	updateStatusFunc        func(ctx context.Context, cardID, userID string, status models.CardStatus) error
 	getCardTransactionsFunc func(ctx context.Context, cardID, userID string) ([]models.Transaction, error)
-	processPaymentFunc      func(ctx context.Context, transactionID, cardID, cvv string, expiryMonth, expiryYear int, amount int64, merchantName string) error
+	processPaymentFunc      func(ctx context.Context, transactionID, cardID, cvv string, expiryMonth, expiryYear int, amount int64, merchantName string) (*models.CardPaymentResult, error)
 }
 
 func (m *mockCardRepository) Create(ctx context.Context, card *models.Card) error {
@@ -52,11 +52,13 @@ func (m *mockCardRepository) GetCardTransactions(ctx context.Context, cardID, us
 	return nil, nil
 }
 
-func (m *mockCardRepository) ProcessPayment(ctx context.Context, transactionID, cardID, cvv string, expiryMonth, expiryYear int, amount int64, merchantName string) error {
+func (m *mockCardRepository) ProcessPayment(ctx context.Context, transactionID, cardID, cvv string, expiryMonth, expiryYear int, amount int64, merchantName string) (*models.CardPaymentResult, error) {
 	if m.processPaymentFunc != nil {
 		return m.processPaymentFunc(ctx, transactionID, cardID, cvv, expiryMonth, expiryYear, amount, merchantName)
 	}
-	return nil
+	return &models.CardPaymentResult{
+		TransactionID: transactionID,
+	}, nil
 }
 
 // tests
@@ -86,7 +88,7 @@ func TestCardService_CreateCard(t *testing.T) {
 					return tt.mockCardErr
 				},
 			}
-			service := services.NewCardService(cardRepo)
+			service := services.NewCardService(cardRepo, nil)
 
 			card, err := service.CreateCard(context.Background(), tt.userID, tt.walletID, tt.limitAmount)
 			if (err != nil) != tt.wantErr {

@@ -151,7 +151,7 @@ func TestTransactionService_Transfer(t *testing.T) {
 				},
 			}
 
-			service := services.NewTransactionService(mockRepo, exchangeService, walletRepo)
+			service := services.NewTransactionService(mockRepo, exchangeService, walletRepo, nil)
 			err := service.Transfer(context.Background(), &dto.TransferRequest{
 				TransactionID:    tt.inputTransactionID,
 				FromWalletNumber: tt.inputFromWalletNum,

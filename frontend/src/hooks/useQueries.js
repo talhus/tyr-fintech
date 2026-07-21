@@ -7,7 +7,7 @@ export function useWallets() {
     queryKey: ['wallets'],
     queryFn: async () => {
       const response = await api.get('/wallets');
-      return response.data.wallets || [];
+      return response.data.data?.wallets || response.data.wallets || [];
     },
   });
 }
@@ -197,7 +197,6 @@ export function useProcessCardPaymentMutation(addToast) {
       return response.data;
     },
     onSuccess: () => {
-      addToast('Card payment processed successfully', 'success');
       queryClient.invalidateQueries({ queryKey: ['cards'] });
       queryClient.invalidateQueries({ queryKey: ['wallets'] });
       queryClient.invalidateQueries({ queryKey: ['transactions'] });

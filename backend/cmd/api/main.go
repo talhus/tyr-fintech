@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/iamtbay/tyr-fintech/internal/db"
 	"github.com/iamtbay/tyr-fintech/internal/handlers"
+	"github.com/iamtbay/tyr-fintech/internal/notifications"
 	"github.com/iamtbay/tyr-fintech/internal/repos"
 	"github.com/iamtbay/tyr-fintech/internal/services"
 	"github.com/iamtbay/tyr-fintech/internal/worker"
@@ -24,6 +25,11 @@ func main() {
 
 	//start worker
 	go worker.StartWebhookWorker()
+
+	// Initialize notifications
+	hub := notifications.NewHub()
+	notificationService := notifications.NewNotificationService(hub)
+
 	// Initialize repos
 	userRepo := repos.NewUserRepository(pool.DB)
 	walletRepo := repos.NewWalletRepository(pool.DB)
@@ -35,15 +41,16 @@ func main() {
 	walletService := services.NewWalletService(walletRepo)
 	//mock exchange
 	exchangeService := services.NewMockExchangeService()
-	//transaction service
-	transactionService := services.NewTransactionService(transactionRepo, exchangeService, walletRepo)
-	cardService := services.NewCardService(cardRepo)
+	//transaction service & card service
+	transactionService := services.NewTransactionService(transactionRepo, exchangeService, walletRepo, notificationService)
+	cardService := services.NewCardService(cardRepo, notificationService)
 
 	// Initialize handlers
 	userHandler := handlers.NewUserHandler(userService)
 	walletHandler := handlers.NewWalletHandler(walletService)
 	transactionHandler := handlers.NewTransactionHandler(transactionService)
 	cardHandler := handlers.NewCardHandler(cardService)
+	notificationHandler := handlers.NewNotificationHandler(hub)
 
 	// Setup Gin router
 	r := gin.Default()
@@ -63,7 +70,7 @@ func main() {
 		c.Next()
 	})
 
-	handlers.RegisterRoutes(r, userHandler, walletHandler, transactionHandler, cardHandler)
+	handlers.RegisterRoutes(r, userHandler, walletHandler, transactionHandler, cardHandler, notificationHandler)
 
 	// Start Gin HTTP server
 	log.Println("Starting Gin server on :8080...")

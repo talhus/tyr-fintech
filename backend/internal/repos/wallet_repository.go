@@ -34,10 +34,15 @@ func (r *WalletRepository) Create(ctx context.Context, wallet *models.Wallet) er
 // GET WALLET BY ID
 
 func (r *WalletRepository) GetWalletByID(ctx context.Context, walletID int64) (*models.WalletResponse, error) {
-	query := `SELECT balance,currency FROM wallets WHERE wallet_number = $1 AND deleted_at IS NULL`
+	query := `SELECT 
+		u.email,w.user_id,w.balance,w.currency
+		FROM wallets w 
+		JOIN users u 
+		ON w.user_id=u.id 
+		WHERE w.wallet_number = $1 AND w.deleted_at IS NULL`
 	row := r.pool.QueryRow(ctx, query, walletID)
 	var walletResponse models.WalletResponse
-	err := row.Scan(&walletResponse.Balance, &walletResponse.Currency)
+	err := row.Scan(&walletResponse.UserEmail, &walletResponse.UserID, &walletResponse.Balance, &walletResponse.Currency)
 	if err != nil {
 		return nil, err
 	}

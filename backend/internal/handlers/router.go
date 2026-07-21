@@ -7,10 +7,11 @@ import (
 	"github.com/iamtbay/tyr-fintech/internal/middleware"
 )
 
-func RegisterRoutes(r *gin.Engine, userHandler *UserHandler, walletHandler *WalletHandler, txHandler *TransactionHandler, cardHandler *CardHandler) {
+func RegisterRoutes(r *gin.Engine, userHandler *UserHandler, walletHandler *WalletHandler, txHandler *TransactionHandler, cardHandler *CardHandler, notificationHandler *NotificationHandler) {
 	// Rate Limiters
 	authLimiter := middleware.RateLimit(5, time.Minute)   // Strict limit for login/register to prevent brute force
 	apiLimiter := middleware.RateLimit(100, time.Minute) // Standard limit for API endpoints
+	
 
 	// Public auth routes with strict rate limiting
 	authGroup := r.Group("/api/v1/auth")
@@ -44,6 +45,8 @@ func RegisterRoutes(r *gin.Engine, userHandler *UserHandler, walletHandler *Wall
 		authorized.POST("/cards/:cardID/freeze", cardHandler.FreezeCard)
 		authorized.POST("/cards/:cardID/unfreeze", cardHandler.ActivateCard)
 		authorized.POST("/cards/:cardID/process-payment", cardHandler.ProcessPayment)
+		//notifications SSE stream
+		authorized.GET("/notifications/stream", notificationHandler.Stream)
 		//auth
 		authorized.POST("/logout", userHandler.Logout)
 	}
