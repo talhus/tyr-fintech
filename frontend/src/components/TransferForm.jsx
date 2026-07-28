@@ -279,7 +279,9 @@ export default function TransferForm({ wallets, onTransfer, getCurrencySymbol })
           {recipientInfo && exchangeRate && selectedWallet?.currency !== (recipientInfo?.Currency || recipientInfo?.currency) && !isFetchingRate && (
             <div className="mt-2.5 p-3 rounded-xl bg-secondary/10 border border-secondary/20 space-y-1 text-xs animate-fade-in text-secondary">
               <div className="flex justify-between items-center">
-                <span>Exchange Rate:</span>
+                <span className="flex items-center gap-1.5 font-medium">
+                  Exchange Rate <span className="text-[10px] px-1.5 py-0.5 rounded bg-secondary/20 font-mono">⚡ Redis Cached</span>
+                </span>
                 <span className="font-semibold">
                   1 {selectedWallet.currency} = {exchangeRate} {recipientInfo?.Currency || recipientInfo?.currency}
                 </span>

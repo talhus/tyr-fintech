@@ -54,5 +54,4 @@ type CardPaymentStatus string
 
 const (
 	CardPaymentStatusApproved CardPaymentStatus = "approved"
-	CardPaymentStatusDeclined CardPaymentStatus = "declined"
 )

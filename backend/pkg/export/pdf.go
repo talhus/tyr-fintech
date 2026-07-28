@@ -58,12 +58,11 @@ func TransactionsToPDF(walletID string, transactions []*models.Transaction) ([]b
 		if tx.FromWalletID == walletID {
 			totalOutflow += tx.Amount
 		} else {
-			totalOutflow += 0
 			totalInflow += tx.ConvertedAmount
 		}
 	}
 
-	summaryText := fmt.Sprintf("Total Transactions: %d  |  Outflow: -$%.2f", len(transactions), float64(totalOutflow)/100.0)
+	summaryText := fmt.Sprintf("Total: %d | Inflow: +$%.2f | Outflow: -$%.2f", len(transactions), float64(totalInflow)/100.0, float64(totalOutflow)/100.0)
 	pdf.SetFont("Arial", "", 9)
 	pdf.SetTextColor(71, 85, 105)
 	pdf.SetXY(100, 41)

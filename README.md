@@ -4,32 +4,35 @@ Tyr Fintech is a modern, high-performance, and secure multi-currency digital wal
 
 ---
 
-## 🚀 Tech Stack
+## Tech Stack
 
 ### Backend
-* **Language**: Go 1.26+
-* **Web Framework**: Gin-Gonic (high performance, routing, middlewares)
-* **Rate Limiting**: `golang.org/x/time/rate` (Token bucket algorithm for IP/route rate limiting)
-* **Real-time Engine**: Server-Sent Events (SSE Hub & background email/worker queues)
-* **Database Driver**: PGX v5 (connection pooling, native Postgres integration)
-* **Database**: PostgreSQL 16 (relational database with transaction isolation)
-* **Migrations**: Golang-migrate (versioned database migrations)
+
+- **Language**: Go 1.26+
+- **Web Framework**: Gin-Gonic (high performance, routing, middlewares)
+- **Rate Limiting**: `golang.org/x/time/rate` (Token bucket algorithm for IP/route rate limiting)
+- **Real-time Engine**: Server-Sent Events (SSE Hub & background email/worker queues)
+- **Database Driver**: PGX v5 (connection pooling, native Postgres integration)
+- **Database**: PostgreSQL 16 (relational database with transaction isolation)
+- **Migrations**: Golang-migrate (versioned database migrations)
 
 ### Frontend
-* **Build System**: Vite (lightning-fast HMR and building)
-* **Framework**: React 19 (functional components, contexts, custom hooks)
-* **Server State Management**: TanStack Query (React Query v5 for caching and reactive UI invalidation)
-* **Styling**: Tailwind CSS v4 (responsive utility-first layout, custom glassmorphism design system)
-* **Icons**: Lucide React
-* **API Client**: Axios (configured with credentials and global interceptors)
+
+- **Build System**: Vite (lightning-fast HMR and building)
+- **Framework**: React 19 (functional components, contexts, custom hooks)
+- **Server State Management**: TanStack Query (React Query v5 for caching and reactive UI invalidation)
+- **Styling**: Tailwind CSS v4 (responsive utility-first layout, custom glassmorphism design system)
+- **Icons**: Lucide React
+- **API Client**: Axios (configured with credentials and global interceptors)
 
 ### DevOps & CI/CD
-* **Containers**: Docker & Docker Compose (multi-container orchestrated setup)
-* **CI**: GitHub Actions (automated testing pipeline for backend)
+
+- **Containers**: Docker & Docker Compose (multi-container orchestrated setup)
+- **CI**: GitHub Actions (automated testing pipeline for backend)
 
 ---
 
-## 🔒 Key Design & Features
+## Key Design & Features
 
 1. **Real-time Server-Sent Events (SSE) Notifications**:
    - Live streaming notification engine (`GET /api/v1/notifications/stream`).
@@ -45,34 +48,34 @@ Tyr Fintech is a modern, high-performance, and secure multi-currency digital wal
    - Dynamic RFC-compliant `Retry-After` header returned on `HTTP 429 Too Many Requests`.
 
 3. **Virtual Card Ecosystem**:
-   * Issue virtual Visa/Mastercards directly linked to specific wallet balances (enforced **1 card limit per wallet currency**).
-   * Freeze/Unfreeze cards instantly to restrict unauthorized usage.
-   * View card spendings and process test merchant payments on demand.
-   * View masked card numbers by default with secure unmasking (`CVV` and 16-digit card number) upon user request.
-   * Interactive single-card sliding carousel UI.
+   - Issue virtual Visa/Mastercards directly linked to specific wallet balances (enforced **1 card limit per wallet currency**).
+   - Freeze/Unfreeze cards instantly to restrict unauthorized usage.
+   - View card spendings and process test merchant payments on demand.
+   - View masked card numbers by default with secure unmasking (`CVV` and 16-digit card number) upon user request.
+   - Interactive single-card sliding carousel UI.
 
 4. **Transaction Integrity (ACID)**:
-   * Implements **pessimistic row-level locking (`FOR UPDATE`)** in Go transactions when updating wallet balances.
-   * Prevents **"Lost Update"** concurrency bugs during simultaneous transfers or card payments.
+   - Implements **pessimistic row-level locking (`FOR UPDATE`)** in Go transactions when updating wallet balances.
+   - Prevents **"Lost Update"** concurrency bugs during simultaneous transfers or card payments.
 
 5. **Idempotency Protection**:
-   * The `/transfer` endpoint accepts an `X-Idempotency-Key` header.
-   * Prevents duplicate requests (e.g., due to network retries or double clicks) from executing multiple transfers.
+   - The `/transfer` endpoint accepts an `X-Idempotency-Key` header.
+   - Prevents duplicate requests (e.g., due to network retries or double clicks) from executing multiple transfers.
 
 6. **Dynamic Exchange Rates & Destination Lookup**:
-   * Automatic 500ms debounced recipient verification when typing destination wallet numbers.
-   * Live exchange rate calculations (`GET /exchange-rate`) displaying exact recipient amounts.
+   - Automatic 500ms debounced recipient verification when typing destination wallet numbers.
+   - Live exchange rate calculations (`GET /exchange-rate`) displaying exact recipient amounts.
 
 7. **JWT Auth via HttpOnly Cookies**:
-   * Secure authentication with JSON Web Tokens (JWT) stored in HTTP-Only, Secure cookies to prevent XSS token theft.
+   - Secure authentication with JSON Web Tokens (JWT) stored in HTTP-Only, Secure cookies to prevent XSS token theft.
 
 8. **Executive PDF & CSV Statement Exports**:
-   * Download sleek, executive account statements formatted as **PDF** or **CSV**.
-   * Features branded header banners, transaction summaries, decimal currency formatting, and card merchant descriptions.
+   - Download sleek, executive account statements formatted as **PDF** or **CSV**.
+   - Features branded header banners, transaction summaries, decimal currency formatting, and card merchant descriptions.
 
 ---
 
-## 📂 Project Structure
+## Project Structure
 
 ```
 ├── .github/workflows/       # GitHub Actions CI pipelines
@@ -112,6 +115,7 @@ Tyr Fintech is a modern, high-performance, and secure multi-currency digital wal
 ## Development Setup
 
 ### Running with Docker (Recommended)
+
 Build and spin up the entire application stack (PostgreSQL + Backend + Frontend) in one command:
 
 1. Clone the repository and navigate to the project root.
@@ -125,14 +129,15 @@ Build and spin up the entire application stack (PostgreSQL + Backend + Frontend)
    make migrate-up
    ```
 4. Access the application:
-   * **Frontend**: [http://localhost:3000](http://localhost:3000)
-   * **Backend API**: [http://localhost:8080](http://localhost:8080)
+   - **Frontend**: [http://localhost:3000](http://localhost:3000)
+   - **Backend API**: [http://localhost:8080](http://localhost:8080)
 
 ---
 
 ### Running Locally (Manual Setup)
 
 #### 1. Database Setup
+
 1. Navigate to the backend directory:
    ```bash
    cd backend
@@ -147,6 +152,7 @@ Build and spin up the entire application stack (PostgreSQL + Backend + Frontend)
    ```
 
 #### 2. Run the Backend API
+
 1. Create a `backend/.env` file from the example:
    ```bash
    cp .env.example .env
@@ -155,9 +161,10 @@ Build and spin up the entire application stack (PostgreSQL + Backend + Frontend)
    ```bash
    go run cmd/api/main.go
    ```
-   *Backend serves requests on `http://localhost:8080`.*
+   _Backend serves requests on `http://localhost:8080`._
 
 #### 3. Run the Frontend
+
 1. Open a new terminal and navigate to the frontend:
    ```bash
    cd frontend
@@ -170,12 +177,14 @@ Build and spin up the entire application stack (PostgreSQL + Backend + Frontend)
    ```bash
    npm run dev
    ```
-   *Frontend is running on [http://localhost:3000](http://localhost:3000).*
+   _Frontend is running on [http://localhost:3000](http://localhost:3000)._
 
 ---
 
-## 🛠️ Running Tests
+## Running Tests
+
 To run backend unit and service tests:
+
 ```bash
 cd backend
 go test -v ./...
@@ -183,34 +192,39 @@ go test -v ./...
 
 ---
 
-## 📡 API Reference
+## API Reference
 
 ### Auth
-* **`POST /api/v1/auth/register`**: Registers a new user (Rate limited: 5 req/min).
-* **`POST /api/v1/auth/login`**: Authenticates user and sets HttpOnly JWT cookie (Rate limited: 5 req/min).
-* **`POST /api/v1/logout`** (Protected): Clears user session.
+
+- **`POST /api/v1/auth/register`**: Registers a new user (Rate limited: 5 req/min).
+- **`POST /api/v1/auth/login`**: Authenticates user and sets HttpOnly JWT cookie (Rate limited: 5 req/min).
+- **`POST /api/v1/logout`** (Protected): Clears user session.
 
 ### Real-time Notifications
-* **`GET /api/v1/notifications/stream`** (Protected): Opens an SSE connection for live notification streaming.
+
+- **`GET /api/v1/notifications/stream`** (Protected): Opens an SSE connection for live notification streaming.
 
 ### Wallets
-* **`GET /api/v1/wallets`** (Protected): Retrieves all wallets owned by the authenticated user.
-* **`POST /api/v1/wallets`** (Protected): Activates/Creates a new wallet for a specified currency (`TRY`, `USD`, or `EUR`).
-* **`GET /api/v1/wallets/verify/:walletID`** (Protected): Verifies wallet number existence and owner details.
-* **`DELETE /api/v1/wallets/:walletID`** (Protected): Soft deletes the specified wallet.
+
+- **`GET /api/v1/wallets`** (Protected): Retrieves all wallets owned by the authenticated user.
+- **`POST /api/v1/wallets`** (Protected): Activates/Creates a new wallet for a specified currency (`TRY`, `USD`, or `EUR`).
+- **`GET /api/v1/wallets/verify/:walletID`** (Protected): Verifies wallet number existence and owner details.
+- **`DELETE /api/v1/wallets/:walletID`** (Protected): Soft deletes the specified wallet.
 
 ### Virtual Cards
-* **`GET /api/v1/cards`** (Protected): Retrieves all virtual cards owned by the user.
-* **`POST /api/v1/cards`** (Protected): Issues a new virtual card linked to a wallet (Limit 1 per wallet currency).
-* **`GET /api/v1/cards/:cardID/details`** (Protected): Retrieves unmasked 16-digit card number and CVV.
-* **`GET /api/v1/cards/:cardID/transactions`** (Protected): Retrieves spendings history for the specified card.
-* **`POST /api/v1/cards/:cardID/freeze`** (Protected): Freezes the card.
-* **`POST /api/v1/cards/:cardID/unfreeze`** (Protected): Activates/unfreezes the card.
-* **`DELETE /api/v1/cards/:cardID`** (Protected): Terminates/closes the card.
-* **`POST /api/v1/cards/:cardID/process-payment`** (Protected): Processes a merchant transaction against the card.
+
+- **`GET /api/v1/cards`** (Protected): Retrieves all virtual cards owned by the user.
+- **`POST /api/v1/cards`** (Protected): Issues a new virtual card linked to a wallet (Limit 1 per wallet currency).
+- **`GET /api/v1/cards/:cardID/details`** (Protected): Retrieves unmasked 16-digit card number and CVV.
+- **`GET /api/v1/cards/:cardID/transactions`** (Protected): Retrieves spendings history for the specified card.
+- **`POST /api/v1/cards/:cardID/freeze`** (Protected): Freezes the card.
+- **`POST /api/v1/cards/:cardID/unfreeze`** (Protected): Activates/unfreezes the card.
+- **`DELETE /api/v1/cards/:cardID`** (Protected): Terminates/closes the card.
+- **`POST /api/v1/cards/:cardID/process-payment`** (Protected): Processes a merchant transaction against the card.
 
 ### Transfers & History
-* **`POST /api/v1/transfer`** (Protected): Initiates money transfer between wallets with idempotency checking.
-* **`GET /api/v1/exchange-rate`** (Protected): Retrieves live conversion exchange rates.
-* **`GET /api/v1/transactions/:walletID`** (Protected): Retrieves transaction logs for the wallet.
-* **`GET /api/v1/transactions/:walletID/export`** (Protected): Exports transaction statements (`?format=pdf` or `?format=csv`).
+
+- **`POST /api/v1/transfer`** (Protected): Initiates money transfer between wallets with idempotency checking.
+- **`GET /api/v1/exchange-rate`** (Protected): Retrieves live conversion exchange rates.
+- **`GET /api/v1/transactions/:walletID`** (Protected): Retrieves transaction logs for the wallet.
+- **`GET /api/v1/transactions/:walletID/export`** (Protected): Exports transaction statements (`?format=pdf` or `?format=csv`).

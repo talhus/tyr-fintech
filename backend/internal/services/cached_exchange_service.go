@@ -60,7 +60,7 @@ func (s *CachedExchangeService) GetRate(ctx context.Context, from, to models.Wal
 	//3 store rate in redis with ttl
 	rateStr := strconv.FormatFloat(rate, 'f', -1, 64)
 	setErr := s.rdb.Set(ctx, cacheKey, rateStr, s.ttl).Err()
-	if err != nil {
+	if setErr != nil {
 		// log warning if redis caching fails, but do not block the response
 		log.Printf("Warning: Failed to cache rate in Redis %v \n", setErr)
 	}

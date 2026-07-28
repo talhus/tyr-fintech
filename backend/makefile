@@ -5,3 +5,5 @@ migrate-up:
 
 migrate-down:
 	migrate -database ${POSTGRESQL_URL} -path ./migrations down
+run:
+	go run cmd/api/main.go

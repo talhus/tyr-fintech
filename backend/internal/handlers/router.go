@@ -5,13 +5,16 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/iamtbay/tyr-fintech/internal/middleware"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-func RegisterRoutes(r *gin.Engine, userHandler *UserHandler, walletHandler *WalletHandler, txHandler *TransactionHandler, cardHandler *CardHandler, notificationHandler *NotificationHandler) {
+func RegisterRoutes(r *gin.Engine, userHandler *UserHandler, walletHandler *WalletHandler, txHandler *TransactionHandler, cardHandler *CardHandler, notificationHandler *NotificationHandler, redisLimiter *middleware.RedisRateLimiter) {
+
+	r.Use(middleware.PrometheusMiddleware())
+	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 	// Rate Limiters
-	authLimiter := middleware.RateLimit(5, time.Minute)   // Strict limit for login/register to prevent brute force
-	apiLimiter := middleware.RateLimit(100, time.Minute) // Standard limit for API endpoints
-	
+	authLimiter := redisLimiter.Limit("auth", 5, time.Minute)
+	apiLimiter := redisLimiter.Limit("api", 100, time.Minute)
 
 	// Public auth routes with strict rate limiting
 	authGroup := r.Group("/api/v1/auth")
