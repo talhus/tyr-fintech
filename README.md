@@ -109,7 +109,7 @@ Tyr Fintech is a modern, high-performance, and secure multi-currency digital wal
 
 ---
 
-## ⚙️ Development Setup
+## Development Setup
 
 ### Running with Docker (Recommended)
 Build and spin up the entire application stack (PostgreSQL + Backend + Frontend) in one command:

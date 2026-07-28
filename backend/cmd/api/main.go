@@ -1,23 +1,22 @@
 package main
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/gin-gonic/gin"
+	"github.com/iamtbay/tyr-fintech/config"
 	"github.com/iamtbay/tyr-fintech/internal/db"
 	"github.com/iamtbay/tyr-fintech/internal/handlers"
 	"github.com/iamtbay/tyr-fintech/internal/notifications"
 	"github.com/iamtbay/tyr-fintech/internal/repos"
 	"github.com/iamtbay/tyr-fintech/internal/services"
 	"github.com/iamtbay/tyr-fintech/internal/worker"
-	"github.com/joho/godotenv"
 )
 
 func main() {
-	if err := godotenv.Load(); err != nil {
-		log.Println("Warning: .env file not found, loading configurations from environment")
-	}
-	pool, err := db.Connect()
+	cfg := config.New()
+	pool, err := db.Connect(cfg.DatabaseURL)
 	if err != nil {
 		log.Fatal("Failed to connect to the database", err)
 	}
@@ -57,7 +56,7 @@ func main() {
 
 	// CORS middleware
 	r.Use(func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "http://localhost:3000")
+		c.Writer.Header().Set("Access-Control-Allow-Origin", fmt.Sprintf("http://%v", cfg.APIHost))
 		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
 		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, accept, origin, Cache-Control, X-Requested-With, X-Idempotency-Key")
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS, GET, PUT, DELETE")
@@ -73,8 +72,8 @@ func main() {
 	handlers.RegisterRoutes(r, userHandler, walletHandler, transactionHandler, cardHandler, notificationHandler)
 
 	// Start Gin HTTP server
-	log.Println("Starting Gin server on :8080...")
-	if err := r.Run(":8080"); err != nil {
+	log.Printf("Starting Gin server on %v:%v", cfg.APIHost, cfg.APIPort)
+	if err := r.Run(fmt.Sprintf(":%v", cfg.APIPort)); err != nil {
 		log.Fatalf("Failed to run Gin server: %v", err)
 	}
 }
