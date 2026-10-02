@@ -10,3 +10,4 @@ export { default as CardsSection } from './CardsSection';
 export { default as CreateCardModal } from './CreateCardModal';
 export { default as CardPaymentModal } from './CardPaymentModal';
 export { default as CardSpendingsModal } from './CardSpendingsModal';
+export { default as ExportModal } from './ExportModal';

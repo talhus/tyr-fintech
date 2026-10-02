@@ -12,15 +12,16 @@ export function useWallets() {
   });
 }
 
-// Fetch transaction history for a specific wallet
-export function useTransactionHistory(walletId) {
+// Fetch transaction history for a specific wallet or all wallets
+export function useTransactionHistory(walletId = 'all') {
+  const targetId = walletId || 'all';
   return useQuery({
-    queryKey: ['transactions', walletId],
+    queryKey: ['transactions', targetId],
     queryFn: async () => {
-      const response = await api.get(`/transactions/${walletId}`);
-      return response.data.data || [];
+      const response = await api.get(`/transactions/${targetId}`);
+      const data = response.data?.data;
+      return Array.isArray(data) ? data : [];
     },
-    enabled: !!walletId,
   });
 }
 
@@ -214,7 +215,8 @@ export function useCardTransactions(cardId) {
     queryKey: ['cardTransactions', cardId],
     queryFn: async () => {
       const response = await api.get(`/cards/${cardId}/transactions`);
-      return response.data.data || response.data || [];
+      const data = response.data?.data;
+      return Array.isArray(data) ? data : [];
     },
     enabled: !!cardId,
   });

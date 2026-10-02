@@ -42,10 +42,13 @@ func (c *EventConsumer) StartConsuming() error {
 		return fmt.Errorf("failed to declare queue: %w", err)
 	}
 
-	// bind the queue
+	// unbind legacy wildcard if present
+	_ = ch.QueueUnbind(q.Name, "#", queue.ExchangeName, nil)
+
+	// bind the queue only to notification events (not merchant webhooks)
 	err = ch.QueueBind(
 		q.Name,
-		"#",
+		"notifications.#",
 		queue.ExchangeName,
 		false,
 		nil,
@@ -76,8 +79,7 @@ func (c *EventConsumer) StartConsuming() error {
 			var e queue.EventPayload
 			err := json.Unmarshal(d.Body, &e)
 			if err != nil {
-				fmt.Printf("Error marshaling RabbitMQ message %v \n", err)
-				d.Nack(false, false)
+				d.Ack(false)
 				continue
 			}
 

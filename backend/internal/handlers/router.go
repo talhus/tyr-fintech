@@ -5,13 +5,20 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/iamtbay/tyr-fintech/internal/middleware"
+	"github.com/iamtbay/tyr-fintech/internal/repos"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-func RegisterRoutes(r *gin.Engine, userHandler *UserHandler, walletHandler *WalletHandler, txHandler *TransactionHandler, cardHandler *CardHandler, notificationHandler *NotificationHandler, redisLimiter *middleware.RedisRateLimiter) {
+func RegisterRoutes(r *gin.Engine, userHandler *UserHandler, walletHandler *WalletHandler, txHandler *TransactionHandler, cardHandler *CardHandler, notificationHandler *NotificationHandler, chargeHandler *ChargeHandler, checkoutHandler *CheckoutHandler, merchantRepo repos.MerchantRepository, redisLimiter *middleware.RedisRateLimiter) {
 
 	r.Use(middleware.PrometheusMiddleware())
 	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
+	r.GET("/health", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"status":    "UP",
+			"timestamp": time.Now().Unix(),
+		})
+	})
 	// Rate Limiters
 	authLimiter := redisLimiter.Limit("auth", 5, time.Minute)
 	apiLimiter := redisLimiter.Limit("api", 100, time.Minute)
@@ -24,7 +31,10 @@ func RegisterRoutes(r *gin.Engine, userHandler *UserHandler, walletHandler *Wall
 		authGroup.POST("/login", userHandler.Login)
 	}
 
-	// Protected routes group
+	// Public checkout session query (for checkout page UI)
+	r.GET("/api/v1/checkout/sessions/:session_id", checkoutHandler.GetSessionDetails)
+
+	// Protected routes group (User JWT)
 	authorized := r.Group("/api/v1")
 	authorized.Use(apiLimiter)
 	authorized.Use(middleware.AuthRequired())
@@ -52,5 +62,16 @@ func RegisterRoutes(r *gin.Engine, userHandler *UserHandler, walletHandler *Wall
 		authorized.GET("/notifications/stream", notificationHandler.Stream)
 		//auth
 		authorized.POST("/logout", userHandler.Logout)
+
+		// Pay hosted checkout session from user's TyrFintech wallet
+		authorized.POST("/checkout/sessions/:session_id/pay", checkoutHandler.PaySession)
+	}
+
+	// B2B Gateway Payment Route (Merchant API Key - Foodeli Integration)
+	gatewayGroup := r.Group("/api/v1")
+	gatewayGroup.Use(middleware.MerchantAuthRequired(merchantRepo))
+	{
+		gatewayGroup.POST("/charges", chargeHandler.ProcessCharge)
+		gatewayGroup.POST("/checkout/sessions", checkoutHandler.CreateSession)
 	}
 }

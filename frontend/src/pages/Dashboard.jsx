@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { TopBar, TransferForm, ToastContainer, WalletsSection, TransactionHistory, CardsSection } from '../components';
 import { Navigate } from 'react-router-dom';
@@ -21,7 +21,7 @@ const getCurrencySymbol = (currency) => {
 
 function Dashboard() {
   const { user, logout } = useAuth();
-  const [selectedWalletId, setSelectedWalletId] = useState(null);
+  const [selectedWalletId, setSelectedWalletId] = useState('all');
   const [activeTab, setActiveTab] = useState('transfer'); // 'transfer' or 'cards'
   const [toasts, setToasts] = useState([]);
 
@@ -43,17 +43,6 @@ function Dashboard() {
   const { data: cards = [] } = useCards();
   const transferMutation = useTransferMutation((msg, type) => addToast(msg, type));
 
-  // Synchronize selectedWalletId with loaded wallets
-  useEffect(() => {
-    if (wallets.length > 0) {
-      if (!selectedWalletId || !wallets.some((w) => w.id === selectedWalletId)) {
-        setSelectedWalletId(wallets[0].id);
-      }
-    } else {
-      setSelectedWalletId(null);
-    }
-  }, [wallets, selectedWalletId]);
-
   const handleTransfer = useCallback(async (fromWalletNumber, toWalletNumber, amount, idempotencyKey) => {
     try {
       await transferMutation.mutateAsync({
@@ -71,8 +60,6 @@ function Dashboard() {
   if (!user) {
     return <Navigate to="/login" replace />;
   }
-
-  const selectedWalletCurrency = wallets.find((w) => w.id === selectedWalletId)?.currency;
 
   return (
     <div className="min-h-screen bg-background relative overflow-hidden font-sans">
@@ -100,13 +87,12 @@ function Dashboard() {
               addToast={addToast}
             />
 
-            {selectedWalletId && (
-              <TransactionHistory
-                walletId={selectedWalletId}
-                currency={selectedWalletCurrency}
-                addToast={addToast}
-              />
-            )}
+            <TransactionHistory
+              walletId={selectedWalletId}
+              wallets={wallets}
+              onSelectWallet={setSelectedWalletId}
+              addToast={addToast}
+            />
           </div>
 
           {/* Right Column: Tabbed Action Switcher (Transfer Funds | Virtual Cards) */}

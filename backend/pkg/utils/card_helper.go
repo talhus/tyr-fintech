@@ -55,3 +55,31 @@ func MaskCardNumber(cardNumber string) string {
 	// return 6 first digits + "******" + last 4 digits
 	return cardNumber[:6] + "******" + cardNumber[12:]
 }
+
+func ValidateLuhn(cardNumber string) bool {
+	cleanNumber := ""
+	for _, ch := range cardNumber {
+		if ch >= '0' && ch <= '9' {
+			cleanNumber += string(ch)
+		}
+	}
+	if len(cleanNumber) < 13 || len(cleanNumber) > 19 {
+		return false
+	}
+	sum := 0
+	alternate := false
+	for i := len(cleanNumber) - 1; i >= 0; i-- {
+		n := int(cleanNumber[i] - '0')
+		if alternate {
+			n *= 2
+			if n > 9 {
+				n -= 9
+			}
+		}
+
+		sum += n
+		alternate = !alternate
+	}
+	return sum%10 == 0
+
+}

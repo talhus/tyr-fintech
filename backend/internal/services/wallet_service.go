@@ -7,6 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/iamtbay/tyr-fintech/internal/dto"
 	"github.com/iamtbay/tyr-fintech/internal/models"
+	"github.com/iamtbay/tyr-fintech/internal/repos"
 )
 
 type WalletRepository interface {
@@ -15,6 +16,7 @@ type WalletRepository interface {
 	GetWalletByID(ctx context.Context, walletID int64) (*models.WalletResponse, error)
 	Delete(ctx context.Context, userID, walletID string) error
 	VerifyWallet(ctx context.Context, walletID int64) (*dto.WalletLookUpResult, error)
+	GetWalletDetailsForPDF(ctx context.Context, walletID string) (*repos.WalletPDFDetails, error)
 }
 
 type WalletService struct {

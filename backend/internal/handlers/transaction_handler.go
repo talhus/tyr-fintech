@@ -7,14 +7,16 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/iamtbay/tyr-fintech/internal/dto"
 	"github.com/iamtbay/tyr-fintech/internal/models"
+	"github.com/iamtbay/tyr-fintech/internal/repos"
 	"github.com/iamtbay/tyr-fintech/pkg/export"
 	"github.com/iamtbay/tyr-fintech/pkg/response"
 )
 
 type TransactionService interface {
 	Transfer(ctx context.Context, req *dto.TransferRequest) error
-	GetHistory(ctx context.Context, walletID string) ([]*models.Transaction, error)
+	GetHistory(ctx context.Context, walletID string, userID string, startDate string, endDate string) ([]*models.Transaction, error)
 	GetExchangeRate(ctx context.Context, from, to models.WalletCurrency) (float64, error)
+	GetWalletDetailsForPDF(ctx context.Context, walletID string) (*repos.WalletPDFDetails, error)
 }
 
 type TransactionHandler struct {
@@ -64,12 +66,11 @@ func (h *TransactionHandler) Transfer(c *gin.Context) {
 
 func (h *TransactionHandler) GetHistory(c *gin.Context) {
 	walletID := c.Param("walletID")
-	if walletID == "" {
-		response.Error(c, http.StatusBadRequest, "wallet id can't be empty")
-		return
-	}
+	userID := c.GetString("userID")
+	startDate := c.Query("start_date")
+	endDate := c.Query("end_date")
 
-	txns, err := h.transactionService.GetHistory(c.Request.Context(), walletID)
+	txns, err := h.transactionService.GetHistory(c.Request.Context(), walletID, userID, startDate, endDate)
 	if err != nil {
 		response.Error(c, http.StatusBadRequest, err.Error())
 		return
@@ -80,16 +81,17 @@ func (h *TransactionHandler) GetHistory(c *gin.Context) {
 
 func (h *TransactionHandler) ExportHistory(c *gin.Context) {
 	walletID := c.Param("walletID")
-	if walletID == "" {
-		response.Error(c, http.StatusBadRequest, "wallet id can't be empty")
+	userID := c.GetString("userID")
+	format := c.DefaultQuery("format", "csv")
+	startDate := c.Query("start_date")
+	endDate := c.Query("end_date")
+
+	if format == "pdf" && (walletID == "all" || walletID == "") {
+		response.Error(c, http.StatusBadRequest, "Official PDF bank statements can only be generated for a specific wallet account. Please select a wallet account.")
 		return
 	}
 
-	//
-	format := c.DefaultQuery("format", "csv")
-
-	//
-	txns, err := h.transactionService.GetHistory(c.Request.Context(), walletID)
+	txns, err := h.transactionService.GetHistory(c.Request.Context(), walletID, userID, startDate, endDate)
 	if err != nil {
 		response.Error(c, http.StatusInternalServerError, err.Error())
 		return
@@ -97,7 +99,13 @@ func (h *TransactionHandler) ExportHistory(c *gin.Context) {
 
 	switch format {
 	case "pdf":
-		pdfBytes, err := export.TransactionsToPDF(walletID, txns)
+		details, err := h.transactionService.GetWalletDetailsForPDF(c.Request.Context(), walletID)
+		if err != nil {
+			response.Error(c, http.StatusBadRequest, "Failed to fetch wallet account details: "+err.Error())
+			return
+		}
+
+		pdfBytes, err := export.TransactionsToPDF(details.OwnerName, details.WalletNumber, details.Currency, walletID, txns)
 		if err != nil {
 			response.Error(c, http.StatusInternalServerError, "PDF couldn't produce: "+err.Error())
 			return
@@ -118,7 +126,6 @@ func (h *TransactionHandler) ExportHistory(c *gin.Context) {
 		response.Error(c, http.StatusBadRequest, "unsupported format")
 		return
 	}
-
 }
 
 func (h *TransactionHandler) GetExchangeRate(c *gin.Context) {

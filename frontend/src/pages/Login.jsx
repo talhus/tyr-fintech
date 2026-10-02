@@ -162,6 +162,39 @@ function Login() {
             </button>
           </form>
 
+          {!isRegister && (
+            <div className="mt-4">
+              <div className="relative my-4">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-white/10"></div>
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background/80 px-2 text-white/40">Or test instantly</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                disabled={isLoading}
+                onClick={async () => {
+                  setIsLoading(true);
+                  setError('');
+                  setEmail('demo@tyr.com');
+                  setPassword('demo123456');
+                  const res = await login('demo@tyr.com', 'demo123456');
+                  if (res.success) {
+                    navigate('/dashboard');
+                  } else {
+                    setError(res.error || 'Demo login failed. Please verify backend is running.');
+                  }
+                  setIsLoading(false);
+                }}
+                className="w-full py-2.5 px-4 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 font-medium rounded-xl transition-all duration-200 flex items-center justify-center gap-2 text-sm shadow-lg shadow-emerald-500/10 cursor-pointer"
+              >
+                Quick Recruiter / Demo Login
+              </button>
+            </div>
+          )}
+
           <div className="mt-6 text-center">
             <p className="text-white/50 text-sm">
               {isRegister ? (

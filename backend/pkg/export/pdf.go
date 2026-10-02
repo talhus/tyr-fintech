@@ -9,7 +9,7 @@ import (
 	"github.com/jung-kurt/gofpdf"
 )
 
-func TransactionsToPDF(walletID string, transactions []*models.Transaction) ([]byte, error) {
+func TransactionsToPDF(userName string, walletNumber int64, currency string, walletID string, transactions []*models.Transaction) ([]byte, error) {
 	pdf := gofpdf.New("P", "mm", "A4", "")
 	pdf.SetMargins(10, 15, 10)
 	pdf.SetAutoPageBreak(true, 15)
@@ -30,7 +30,7 @@ func TransactionsToPDF(walletID string, transactions []*models.Transaction) ([]b
 	pdf.SetFont("Arial", "B", 12)
 	pdf.SetTextColor(56, 189, 248) // Light Sky Blue #38BDF8
 	pdf.SetXY(110, 17)
-	pdf.CellFormat(85, 6, "ACCOUNT STATEMENT", "0", 1, "R", false, 0, "")
+	pdf.CellFormat(85, 6, "OFFICIAL BANK STATEMENT", "0", 1, "R", false, 0, "")
 
 	pdf.SetFont("Arial", "", 8)
 	pdf.SetTextColor(148, 163, 184)
@@ -46,26 +46,38 @@ func TransactionsToPDF(walletID string, transactions []*models.Transaction) ([]b
 	pdf.SetFillColor(248, 250, 252) // Light Gray #F8FAFC
 	pdf.SetDrawColor(226, 232, 240) // Slate #E2E8F0
 	pdf.SetLineWidth(0.3)
-	pdf.Rect(10, 38, 190, 16, "FD")
+	pdf.Rect(10, 38, 190, 20, "FD")
+
+	if userName == "" {
+		userName = "Account Holder"
+	}
 
 	pdf.SetFont("Arial", "B", 9)
 	pdf.SetTextColor(51, 65, 85)
 	pdf.SetXY(14, 41)
-	pdf.CellFormat(90, 5, fmt.Sprintf("Wallet Account: %s", walletID), "0", 0, "L", false, 0, "")
+	pdf.CellFormat(90, 5, fmt.Sprintf("Account Holder: %s", userName), "0", 0, "L", false, 0, "")
+
+	pdf.SetFont("Arial", "", 9)
+	pdf.SetTextColor(71, 85, 105)
+	pdf.SetXY(14, 47)
+	accountStr := fmt.Sprintf("Wallet Account: %s (#%d)", currency, walletNumber)
+	pdf.CellFormat(90, 5, accountStr, "0", 0, "L", false, 0, "")
 
 	var totalInflow, totalOutflow int64
 	for _, tx := range transactions {
-		if tx.FromWalletID == walletID {
+		isOutflow := (tx.FromWalletID == walletID) || (tx.CardID != nil && *tx.CardID != "")
+		if isOutflow {
 			totalOutflow += tx.Amount
 		} else {
 			totalInflow += tx.ConvertedAmount
 		}
 	}
 
-	summaryText := fmt.Sprintf("Total: %d | Inflow: +$%.2f | Outflow: -$%.2f", len(transactions), float64(totalInflow)/100.0, float64(totalOutflow)/100.0)
-	pdf.SetFont("Arial", "", 9)
-	pdf.SetTextColor(71, 85, 105)
-	pdf.SetXY(100, 41)
+	summaryText := fmt.Sprintf("Total Tx: %d | Inflow: +%.2f %s | Outflow: -%.2f %s",
+		len(transactions), float64(totalInflow)/100.0, currency, float64(totalOutflow)/100.0, currency)
+	pdf.SetFont("Arial", "B", 8.5)
+	pdf.SetTextColor(51, 65, 85)
+	pdf.SetXY(100, 44)
 	pdf.CellFormat(95, 5, summaryText, "0", 1, "R", false, 0, "")
 
 	pdf.Ln(8)
@@ -87,7 +99,7 @@ func TransactionsToPDF(walletID string, transactions []*models.Transaction) ([]b
 	pdf.SetDrawColor(226, 232, 240)
 
 	for i, tx := range transactions {
-		isOutflow := tx.FromWalletID == walletID
+		isOutflow := (tx.FromWalletID == walletID) || (tx.CardID != nil && *tx.CardID != "")
 
 		// Row background striping
 		if i%2 == 0 {
@@ -155,10 +167,10 @@ func TransactionsToPDF(walletID string, transactions []*models.Transaction) ([]b
 		// Amount format
 		if isOutflow {
 			pdf.SetTextColor(225, 29, 72)
-			pdf.CellFormat(40, 7, fmt.Sprintf("-$%.2f ", amountVal), "1", 1, "R", true, 0, "")
+			pdf.CellFormat(40, 7, fmt.Sprintf("-%.2f %s ", amountVal, currency), "1", 1, "R", true, 0, "")
 		} else {
 			pdf.SetTextColor(16, 185, 129)
-			pdf.CellFormat(40, 7, fmt.Sprintf("+$%.2f ", amountVal), "1", 1, "R", true, 0, "")
+			pdf.CellFormat(40, 7, fmt.Sprintf("+%.2f %s ", amountVal, currency), "1", 1, "R", true, 0, "")
 		}
 	}
 

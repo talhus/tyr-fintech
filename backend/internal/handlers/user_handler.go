@@ -58,7 +58,12 @@ func (h *UserHandler) Login(c *gin.Context) {
 	//JWT
 
 	token, err := jwtPkg.GenerateToken(res.User.ID)
+	if err != nil {
+		response.HandleError(c, err)
+		return
+	}
 	utils.SetAuthCookie(c, token)
+	res.AccessToken = token
 
 	response.Success(c, http.StatusOK, res)
 }

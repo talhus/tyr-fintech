@@ -24,6 +24,13 @@ func (m *mockTransactionRepository) GetTransactionsByWalletID(ctx context.Contex
 	return m.getTransactionsByWalletIDFunc(ctx, walletID)
 }
 
+func (m *mockTransactionRepository) GetTransactions(ctx context.Context, walletID string, userID string, startDate string, endDate string) ([]*models.Transaction, error) {
+	if m.getTransactionsByWalletIDFunc != nil {
+		return m.getTransactionsByWalletIDFunc(ctx, walletID)
+	}
+	return nil, nil
+}
+
 type customMockExchangeService struct {
 	getRateFunc func(ctx context.Context, from, to models.WalletCurrency) (float64, error)
 }

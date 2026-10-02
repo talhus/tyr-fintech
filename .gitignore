@@ -16,7 +16,9 @@ skill.md
 Thumbs.db
 .DS_Store
 
-# --- BACKEND (Go) ---
+# Environment & Secrets
+.env
+*.env
 backend/.env
 backend/*.env
 

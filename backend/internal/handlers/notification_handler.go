@@ -30,15 +30,14 @@ func (h *NotificationHandler) Stream(c *gin.Context) {
 	}
 
 	origin := c.GetHeader("Origin")
-	if origin == "" {
-		origin = "http://localhost:3000"
+	if origin != "" {
+		c.Header("Access-Control-Allow-Origin", origin)
+		c.Header("Access-Control-Allow-Credentials", "true")
 	}
 
 	c.Header("Content-Type", "text/event-stream")
 	c.Header("Cache-Control", "no-cache")
 	c.Header("Connection", "keep-alive")
-	c.Header("Access-Control-Allow-Origin", origin)
-	c.Header("Access-Control-Allow-Credentials", "true")
 	c.Header("X-Accel-Buffering", "no")
 
 	messageChan := h.hub.Register(userID)

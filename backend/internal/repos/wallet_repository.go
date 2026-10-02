@@ -117,3 +117,24 @@ func (r *WalletRepository) VerifyWallet(ctx context.Context, walletID int64) (*d
 	}
 	return &walletResult, nil
 }
+
+type WalletPDFDetails struct {
+	OwnerName    string
+	WalletNumber int64
+	Currency     string
+}
+
+func (r *WalletRepository) GetWalletDetailsForPDF(ctx context.Context, walletID string) (*WalletPDFDetails, error) {
+	query := `
+		SELECT u.name, COALESCE(w.wallet_number, 0), w.currency
+		FROM wallets w
+		JOIN users u ON w.user_id = u.id
+		WHERE w.id = $1 AND w.deleted_at IS NULL
+	`
+	var res WalletPDFDetails
+	err := r.pool.QueryRow(ctx, query, walletID).Scan(&res.OwnerName, &res.WalletNumber, &res.Currency)
+	if err != nil {
+		return nil, err
+	}
+	return &res, nil
+}

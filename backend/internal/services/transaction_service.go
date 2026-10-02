@@ -9,6 +9,7 @@ import (
 	"github.com/iamtbay/tyr-fintech/internal/dto"
 	"github.com/iamtbay/tyr-fintech/internal/models"
 	"github.com/iamtbay/tyr-fintech/internal/notifications"
+	"github.com/iamtbay/tyr-fintech/internal/repos"
 	"github.com/iamtbay/tyr-fintech/internal/worker"
 )
 
@@ -23,6 +24,7 @@ type NotificationService interface {
 type TransactionRepository interface {
 	Transfer(ctx context.Context, req *dto.TransferRequest, convertedAmount int64) error
 	GetTransactionsByWalletID(ctx context.Context, walletID string) ([]*models.Transaction, error)
+	GetTransactions(ctx context.Context, walletID string, userID string, startDate string, endDate string) ([]*models.Transaction, error)
 }
 
 type TransactionService struct {
@@ -84,11 +86,15 @@ func (s *TransactionService) Transfer(ctx context.Context, req *dto.TransferRequ
 }
 
 // GetHistory
-func (s *TransactionService) GetHistory(ctx context.Context, walletID string) ([]*models.Transaction, error) {
-	return s.repo.GetTransactionsByWalletID(ctx, walletID)
+func (s *TransactionService) GetHistory(ctx context.Context, walletID string, userID string, startDate string, endDate string) ([]*models.Transaction, error) {
+	return s.repo.GetTransactions(ctx, walletID, userID, startDate, endDate)
 }
 
 // GetExchangeRate
 func (s *TransactionService) GetExchangeRate(ctx context.Context, from, to models.WalletCurrency) (float64, error) {
 	return s.exchangeService.GetRate(ctx, from, to)
+}
+
+func (s *TransactionService) GetWalletDetailsForPDF(ctx context.Context, walletID string) (*repos.WalletPDFDetails, error) {
+	return s.walletRepo.GetWalletDetailsForPDF(ctx, walletID)
 }

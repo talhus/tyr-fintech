@@ -7,6 +7,7 @@ import (
 
 	"github.com/iamtbay/tyr-fintech/internal/dto"
 	"github.com/iamtbay/tyr-fintech/internal/models"
+	"github.com/iamtbay/tyr-fintech/internal/repos"
 	"github.com/iamtbay/tyr-fintech/internal/services"
 )
 
@@ -47,6 +48,13 @@ func (m *mockWalletRepository) VerifyWallet(ctx context.Context, walletID int64)
 		return m.funcVerifyWallet(ctx, walletID)
 	}
 	return nil, nil
+}
+func (m *mockWalletRepository) GetWalletDetailsForPDF(ctx context.Context, walletID string) (*repos.WalletPDFDetails, error) {
+	return &repos.WalletPDFDetails{
+		OwnerName:    "Test User",
+		WalletNumber: 1000000001,
+		Currency:     "TRY",
+	}, nil
 }
 
 // TESTS

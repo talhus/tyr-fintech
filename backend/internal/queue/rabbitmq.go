@@ -52,6 +52,47 @@ func NewRabbitMQ(url string) (*RabbitMQClient, error) {
 		return nil, fmt.Errorf("failed to declare a RabbitMQ exchange: %w", err)
 	}
 
+	// Declare Dead Letter Exchange (DLX) for failed webhooks & poisoned messages
+	err = Channel.ExchangeDeclare(
+		"fintech.events.dlx",
+		"direct",
+		true,
+		false,
+		false,
+		false,
+		nil,
+	)
+	if err != nil {
+		conn.Close()
+		return nil, fmt.Errorf("failed to declare RabbitMQ DLX exchange: %w", err)
+	}
+
+	// Declare and bind Dead Letter Queue (DLQ)
+	dlq, err := Channel.QueueDeclare(
+		"merchant_webhooks_dlq",
+		true,
+		false,
+		false,
+		false,
+		nil,
+	)
+	if err != nil {
+		conn.Close()
+		return nil, fmt.Errorf("failed to declare RabbitMQ DLQ: %w", err)
+	}
+
+	err = Channel.QueueBind(
+		dlq.Name,
+		"merchant_webhooks_dlq",
+		"fintech.events.dlx",
+		false,
+		nil,
+	)
+	if err != nil {
+		conn.Close()
+		return nil, fmt.Errorf("failed to bind RabbitMQ DLQ: %w", err)
+	}
+
 	fmt.Println("Succesfully connected to RabbitMQ and declared exchange", ExchangeName)
 
 	return &RabbitMQClient{
@@ -101,4 +142,31 @@ func (r *RabbitMQClient) Close() {
 
 func (r *RabbitMQClient) Conn() *amqp.Connection {
 	return r.conn
+}
+
+// PublishMerchantWebhook publishes a merchant webhook event with persistent delivery and retry headers
+func (c *RabbitMQClient) PublishMerchantWebhook(ctx context.Context, routingKey string, payload any, retryCount int32) error {
+	body, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("failed to marshal merchant webhook: %w", err)
+	}
+
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	headers := amqp.Table{
+		"x-retry-count": retryCount,
+	}
+
+	err = c.channel.PublishWithContext(ctx, ExchangeName, routingKey, false, false, amqp.Publishing{
+		ContentType:  "application/json",
+		DeliveryMode: amqp.Persistent,
+		Headers:      headers,
+		Body:         body,
+		Timestamp:    time.Now(),
+	})
+	if err != nil {
+		return fmt.Errorf("failed to publish merchant webhook to RabbitMQ: %w", err)
+	}
+	return nil
 }

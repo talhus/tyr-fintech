@@ -1,0 +1,8 @@
+.git
+tmp/
+.env
+.env.local
+*.log
+coverage.out
+api
+main

@@ -21,6 +21,10 @@ func NewRedisRateLimiter(rdb *redis.Client) *RedisRateLimiter {
 
 func (r *RedisRateLimiter) Limit(keyPrefix string, limit int64, window time.Duration) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		if r == nil || r.rdb == nil {
+			c.Next()
+			return
+		}
 		//get client ip
 		clientIP := c.ClientIP()
 

@@ -33,6 +33,14 @@ func Connect(dsn string) (*PostgresDB, error) {
 	if err != nil {
 		fmt.Printf("Warning: failed to add converted_amount column to transactions table: %v\n", err)
 	}
+	_, err = pool.Exec(context.Background(), `ALTER TABLE cards ALTER COLUMN card_number TYPE VARCHAR(255); ALTER TABLE cards ALTER COLUMN cvv TYPE VARCHAR(255);`)
+	if err != nil {
+		fmt.Printf("Warning: failed to alter cards column types: %v\n", err)
+	}
+	_, err = pool.Exec(context.Background(), `DELETE FROM cards WHERE LENGTH(card_number) < 30 OR LENGTH(cvv) < 20;`)
+	if err != nil {
+		fmt.Printf("Warning: failed to delete unencrypted legacy cards: %v\n", err)
+	}
 	fmt.Println("Successfully connected to PostgresDB")
 	return &PostgresDB{DB: pool}, nil
 }

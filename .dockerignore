@@ -1,0 +1,14 @@
+.git
+.github
+.env
+.env.local
+node_modules
+dist
+tmp
+coverage.out
+*.log
+backend/tmp
+backend/api
+backend/main
+frontend/node_modules
+frontend/dist

@@ -6,15 +6,17 @@ import (
 
 	"github.com/iamtbay/tyr-fintech/internal/models"
 	"github.com/iamtbay/tyr-fintech/pkg/apperrors"
+	"github.com/iamtbay/tyr-fintech/pkg/encryption"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type CardRepository struct {
-	db *pgxpool.Pool
+	db        *pgxpool.Pool
+	encryptor encryption.Encryptor
 }
 
-func NewCardRepository(db *pgxpool.Pool) *CardRepository {
-	return &CardRepository{db: db}
+func NewCardRepository(db *pgxpool.Pool, encryptor encryption.Encryptor) *CardRepository {
+	return &CardRepository{db: db, encryptor: encryptor}
 }
 
 // CREATE
@@ -28,9 +30,19 @@ func (r *CardRepository) Create(ctx context.Context, card *models.Card) error {
 		return apperrors.New(http.StatusBadRequest, "A virtual card already exists for this wallet")
 	}
 
+	pan, err := r.encryptor.Encrypt(card.CardNumber)
+	if err != nil {
+		return err
+	}
+
+	cvv, err := r.encryptor.Encrypt(card.CVV)
+	if err != nil {
+		return err
+	}
+
 	query := `INSERT INTO cards (id, user_id, wallet_id, card_number, cvv, expiry_month, expiry_year, limit_amount, spent_amount,status) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`
 	_, err = r.db.Exec(ctx, query,
-		card.ID, card.UserID, card.WalletID, card.CardNumber, card.CVV, card.ExpiryMonth, card.ExpiryYear, card.LimitAmount, card.SpentAmount, card.Status)
+		card.ID, card.UserID, card.WalletID, pan, cvv, card.ExpiryMonth, card.ExpiryYear, card.LimitAmount, card.SpentAmount, card.Status)
 	if err != nil {
 		return err
 	}
@@ -57,6 +69,14 @@ func (r *CardRepository) GetByUserID(ctx context.Context, userID string) ([]mode
 		if err != nil {
 			return nil, err
 		}
+		// decrypt if valid encrypted ciphertext
+		if decCVV, err := r.encryptor.Decrypt(card.CVV); err == nil {
+			card.CVV = decCVV
+		}
+		if decNum, err := r.encryptor.Decrypt(card.CardNumber); err == nil {
+			card.CardNumber = decNum
+		}
+
 		cards = append(cards, card)
 	}
 	return cards, nil
@@ -113,6 +133,13 @@ func (r *CardRepository) GetCardDetails(ctx context.Context, cardID, userID stri
 	if err != nil {
 		return nil, err
 	}
+	// decrypt if valid encrypted ciphertext
+	if decCVV, err := r.encryptor.Decrypt(card.CVV); err == nil {
+		card.CVV = decCVV
+	}
+	if decNum, err := r.encryptor.Decrypt(card.CardNumber); err == nil {
+		card.CardNumber = decNum
+	}
 	return card, nil
 }
 
@@ -142,10 +169,13 @@ func (r *CardRepository) ProcessPayment(ctx context.Context, transactionID, card
 	if card.Status != models.CardStatusActive {
 		return nil, apperrors.New(http.StatusBadRequest, "Card is not active")
 	}
+	
 	// check if card details are valid
-	if card.CVV != cvv || card.ExpiryMonth != expiryMonth || card.ExpiryYear != expiryYear {
+	decryptedCVV, err := r.encryptor.Decrypt(card.CVV)
+	if err != nil || decryptedCVV != cvv || card.ExpiryMonth != expiryMonth || card.ExpiryYear != expiryYear {
 		return nil, apperrors.New(http.StatusBadRequest, "Invalid card details")
 	}
+	
 	// check if user has enough funds
 	if amount+card.SpentAmount > card.LimitAmount {
 		return nil, apperrors.New(http.StatusBadRequest, "Limit Exceeded")
@@ -189,4 +219,3 @@ func (r *CardRepository) ProcessPayment(ctx context.Context, transactionID, card
 		Amount:        amount,
 	}, nil
 }
-

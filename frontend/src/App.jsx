@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
+import Checkout from './pages/Checkout';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 const queryClient = new QueryClient({
@@ -54,6 +55,11 @@ function App() {
                 <Dashboard />
               </PrivateRoute>
             } 
+          />
+
+          <Route 
+            path="/checkout" 
+            element={<Checkout />} 
           />
         </Routes>
       </BrowserRouter>

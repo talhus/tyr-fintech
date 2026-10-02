@@ -1,12 +1,16 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Send, Wallet, CreditCard, ChevronDown } from 'lucide-react';
-import api from '../lib/axios';
+import React, { useState, useEffect, useRef } from "react";
+import { Send, Wallet, CreditCard, ChevronDown } from "lucide-react";
+import api from "../lib/axios";
 
-export default function TransferForm({ wallets, onTransfer, getCurrencySymbol }) {
-  const [fromWalletNumber, setFromWalletNumber] = useState('');
-  const [toWalletNumber, setToWalletNumber] = useState('');
-  const [transferAmount, setTransferAmount] = useState('');
-  const [idempotencyKey, setIdempotencyKey] = useState('');
+export default function TransferForm({
+  wallets,
+  onTransfer,
+  getCurrencySymbol,
+}) {
+  const [fromWalletNumber, setFromWalletNumber] = useState("");
+  const [toWalletNumber, setToWalletNumber] = useState("");
+  const [transferAmount, setTransferAmount] = useState("");
+  const [idempotencyKey, setIdempotencyKey] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // States for target wallet verification
@@ -28,16 +32,16 @@ export default function TransferForm({ wallets, onTransfer, getCurrencySymbol })
         setIsSelectOpen(false);
       }
     }
-    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
 
   const generateIdempotencyKey = () => {
-    const key = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const key = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
       const r = (Math.random() * 16) | 0;
-      const v = c === 'x' ? r : (r & 0x3) | 0x8;
+      const v = c === "x" ? r : (r & 0x3) | 0x8;
       return v.toString(16);
     });
     setIdempotencyKey(key);
@@ -49,7 +53,7 @@ export default function TransferForm({ wallets, onTransfer, getCurrencySymbol })
 
   useEffect(() => {
     if (wallets.length > 0 && !fromWalletNumber) {
-      setFromWalletNumber(wallets[0].wallet_number?.toString() || '');
+      setFromWalletNumber(wallets[0].wallet_number?.toString() || "");
     }
   }, [wallets, fromWalletNumber]);
 
@@ -65,11 +69,11 @@ export default function TransferForm({ wallets, onTransfer, getCurrencySymbol })
           if (res.data && res.data.success) {
             setRecipientInfo(res.data.data);
           } else {
-            setVerifyError('Wallet verification failed');
+            setVerifyError("Wallet verification failed");
             setRecipientInfo(null);
           }
         } catch (err) {
-          setVerifyError(err.response?.data?.error || 'Wallet not found');
+          setVerifyError(err.response?.data?.error || "Wallet not found");
           setRecipientInfo(null);
         } finally {
           setIsVerifying(false);
@@ -84,7 +88,9 @@ export default function TransferForm({ wallets, onTransfer, getCurrencySymbol })
     }
   }, [toWalletNumber]);
 
-  const selectedWallet = wallets.find((w) => w.wallet_number?.toString() === fromWalletNumber);
+  const selectedWallet = wallets.find(
+    (w) => w.wallet_number?.toString() === fromWalletNumber,
+  );
 
   useEffect(() => {
     const sourceCurrency = selectedWallet?.currency;
@@ -97,7 +103,8 @@ export default function TransferForm({ wallets, onTransfer, getCurrencySymbol })
       }
 
       setIsFetchingRate(true);
-      api.get(`/exchange-rate?from=${sourceCurrency}&to=${targetCurrency}`)
+      api
+        .get(`/exchange-rate?from=${sourceCurrency}&to=${targetCurrency}`)
         .then((res) => {
           if (res.data && res.data.success) {
             setExchangeRate(res.data.data.rate);
@@ -129,12 +136,12 @@ export default function TransferForm({ wallets, onTransfer, getCurrencySymbol })
       parseInt(fromWalletNumber, 10),
       parseInt(toWalletNumber, 10),
       transferAmount,
-      idempotencyKey
+      idempotencyKey,
     );
     if (success) {
-      setFromWalletNumber(wallets[0]?.wallet_number?.toString() || '');
-      setToWalletNumber('');
-      setTransferAmount('');
+      setFromWalletNumber(wallets[0]?.wallet_number?.toString() || "");
+      setToWalletNumber("");
+      setTransferAmount("");
     }
     generateIdempotencyKey();
     setIsSubmitting(false);
@@ -145,11 +152,15 @@ export default function TransferForm({ wallets, onTransfer, getCurrencySymbol })
       <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
         <Send className="w-5 h-5 text-accent" /> Transfer Funds
       </h3>
-      <p className="text-xs text-white/50 mb-6">Send multi-currency balances instantly.</p>
+      <p className="text-xs text-white/50 mb-6">
+        Send multi-currency balances instantly.
+      </p>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div ref={selectRef}>
-          <label className="block text-sm text-white/60 mb-2">Source Wallet</label>
+          <label className="block text-sm text-white/60 mb-2">
+            Source Wallet
+          </label>
           <div className="relative">
             <button
               type="button"
@@ -159,18 +170,27 @@ export default function TransferForm({ wallets, onTransfer, getCurrencySymbol })
               {selectedWallet ? (
                 <div className="flex items-center justify-between w-full pr-2">
                   <div className="flex items-center gap-2">
-                    <span className="font-semibold text-white">{selectedWallet.currency} Wallet</span>
-                    <span className="text-white/40 text-xs font-mono">No: {selectedWallet.wallet_number}</span>
+                    <span className="font-semibold text-white">
+                      {selectedWallet.currency} Wallet
+                    </span>
+                    <span className="text-white/40 text-xs font-mono">
+                      No: {selectedWallet.wallet_number}
+                    </span>
                   </div>
                   <span className="font-bold text-secondary text-sm">
                     {getCurrencySymbol(selectedWallet.currency)}
-                    {(selectedWallet.balance / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {(selectedWallet.balance / 100).toLocaleString(undefined, {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
                   </span>
                 </div>
               ) : (
                 <span className="text-white/40">Select sending account...</span>
               )}
-              <ChevronDown className={`w-4 h-4 text-white/60 transition-transform duration-300 shrink-0 ${isSelectOpen ? 'rotate-180' : ''}`} />
+              <ChevronDown
+                className={`w-4 h-4 text-white/60 transition-transform duration-300 shrink-0 ${isSelectOpen ? "rotate-180" : ""}`}
+              />
             </button>
 
             {isSelectOpen && (
@@ -180,20 +200,31 @@ export default function TransferForm({ wallets, onTransfer, getCurrencySymbol })
                     key={wallet.id}
                     type="button"
                     onClick={() => {
-                      setFromWalletNumber(wallet.wallet_number?.toString() || '');
+                      setFromWalletNumber(
+                        wallet.wallet_number?.toString() || "",
+                      );
                       setIsSelectOpen(false);
                     }}
                     className={`w-full flex items-center justify-between text-left px-4 py-3 hover:bg-white/10 transition-colors cursor-pointer border-b border-white/5 last:border-b-0 ${
-                      wallet.wallet_number?.toString() === fromWalletNumber ? 'bg-white/15 font-medium' : ''
+                      wallet.wallet_number?.toString() === fromWalletNumber
+                        ? "bg-white/15 font-medium"
+                        : ""
                     }`}
                   >
                     <div className="flex flex-col">
-                      <span className="font-semibold text-white">{wallet.currency} Wallet</span>
-                      <span className="text-[10px] text-white/40 font-mono">No: {wallet.wallet_number}</span>
+                      <span className="font-semibold text-white">
+                        {wallet.currency} Wallet
+                      </span>
+                      <span className="text-[10px] text-white/40 font-mono">
+                        No: {wallet.wallet_number}
+                      </span>
                     </div>
                     <span className="font-bold text-secondary text-sm">
                       {getCurrencySymbol(wallet.currency)}
-                      {(wallet.balance / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      {(wallet.balance / 100).toLocaleString(undefined, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
                     </span>
                   </button>
                 ))}
@@ -203,7 +234,12 @@ export default function TransferForm({ wallets, onTransfer, getCurrencySymbol })
         </div>
 
         <div>
-          <label htmlFor="transfer-to" className="block text-sm text-white/60 mb-2">Destination Wallet Number</label>
+          <label
+            htmlFor="transfer-to"
+            className="block text-sm text-white/60 mb-2"
+          >
+            Destination Wallet Number
+          </label>
           <div className="relative">
             <Wallet className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
             <input
@@ -243,7 +279,11 @@ export default function TransferForm({ wallets, onTransfer, getCurrencySymbol })
               <div className="flex justify-between items-center">
                 <span className="text-white/50">Currency:</span>
                 <span className="font-semibold text-secondary flex items-center gap-1">
-                  {recipientInfo.Currency || recipientInfo.currency} ({getCurrencySymbol(recipientInfo.Currency || recipientInfo.currency)})
+                  {recipientInfo.Currency || recipientInfo.currency} (
+                  {getCurrencySymbol(
+                    recipientInfo.Currency || recipientInfo.currency,
+                  )}
+                  )
                 </span>
               </div>
             </div>
@@ -251,7 +291,12 @@ export default function TransferForm({ wallets, onTransfer, getCurrencySymbol })
         </div>
 
         <div>
-          <label htmlFor="transfer-amount" className="block text-sm text-white/60 mb-2">Amount</label>
+          <label
+            htmlFor="transfer-amount"
+            className="block text-sm text-white/60 mb-2"
+          >
+            Amount
+          </label>
           <div className="relative">
             <CreditCard className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40" />
             <input
@@ -276,35 +321,51 @@ export default function TransferForm({ wallets, onTransfer, getCurrencySymbol })
               Fetching exchange rate...
             </p>
           )}
-          {recipientInfo && exchangeRate && selectedWallet?.currency !== (recipientInfo?.Currency || recipientInfo?.currency) && !isFetchingRate && (
-            <div className="mt-2.5 p-3 rounded-xl bg-secondary/10 border border-secondary/20 space-y-1 text-xs animate-fade-in text-secondary">
-              <div className="flex justify-between items-center">
-                <span className="flex items-center gap-1.5 font-medium">
-                  Exchange Rate <span className="text-[10px] px-1.5 py-0.5 rounded bg-secondary/20 font-mono">⚡ Redis Cached</span>
-                </span>
-                <span className="font-semibold">
-                  1 {selectedWallet.currency} = {exchangeRate} {recipientInfo?.Currency || recipientInfo?.currency}
-                </span>
-              </div>
-              {enteredAmount > 0 && (
-                <div className="flex justify-between items-center pt-1 border-t border-secondary/10">
-                  <span className="text-white/50">Recipient Receives:</span>
-                  <span className="font-bold text-white">
-                    {getCurrencySymbol(recipientInfo?.Currency || recipientInfo?.currency)}
-                    {(enteredAmount * exchangeRate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          {recipientInfo &&
+            exchangeRate &&
+            selectedWallet?.currency !==
+              (recipientInfo?.Currency || recipientInfo?.currency) &&
+            !isFetchingRate && (
+              <div className="mt-2.5 p-3 rounded-xl bg-secondary/10 border border-secondary/20 space-y-1 text-xs animate-fade-in text-secondary">
+                <div className="flex justify-between items-center">
+                  <span className="flex items-center gap-1.5 font-medium">
+                    Exchange Rate
+                  </span>
+                  <span className="font-semibold">
+                    1 {selectedWallet.currency} = {exchangeRate}{" "}
+                    {recipientInfo?.Currency || recipientInfo?.currency}
                   </span>
                 </div>
-              )}
-            </div>
-          )}
+                {enteredAmount > 0 && (
+                  <div className="flex justify-between items-center pt-1 border-t border-secondary/10">
+                    <span className="text-white/50">Recipient Receives:</span>
+                    <span className="font-bold text-white">
+                      {getCurrencySymbol(
+                        recipientInfo?.Currency || recipientInfo?.currency,
+                      )}
+                      {(enteredAmount * exchangeRate).toLocaleString(
+                        undefined,
+                        { minimumFractionDigits: 2, maximumFractionDigits: 2 },
+                      )}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
         </div>
 
-        <button 
-          type="submit" 
-          disabled={isSubmitting || isInsufficient || isVerifying || isFetchingRate || !recipientInfo}
+        <button
+          type="submit"
+          disabled={
+            isSubmitting ||
+            isInsufficient ||
+            isVerifying ||
+            isFetchingRate ||
+            !recipientInfo
+          }
           className="glass-button w-full flex items-center justify-center gap-2 mt-6 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <span>{isSubmitting ? 'Sending...' : 'Send Balance'}</span>
+          <span>{isSubmitting ? "Sending..." : "Send Balance"}</span>
           <Send className="w-4 h-4" />
         </button>
       </form>
