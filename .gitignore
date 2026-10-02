@@ -18,9 +18,15 @@ Thumbs.db
 
 # Environment & Secrets
 .env
+.env.*
 *.env
 backend/.env
+backend/.env.*
 backend/*.env
+*.pem
+*.key
+*.cert
+*.crt
 
 backend/api
 backend/main
