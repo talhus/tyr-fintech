@@ -4,7 +4,7 @@ Tyr Fintech is a high-performance multi-currency digital wallet, B2B payment gat
 
 ---
 
-## ⚡ Quick Recruiter Access & Live Demos
+## Quick Recruiter Access & Live Demos
 
 To explore the application without manual registration, use the pre-seeded credentials or the 1-click login buttons:
 
@@ -16,13 +16,15 @@ To explore the application without manual registration, use the pre-seeded crede
 
 ---
 
-## 🚀 Key Architectural Highlights
+## Key Architectural Highlights
 
 ### 1. B2B Payment Gateway & Double-Entry Ledger (Stripe/Iyzico-style)
 * **Direct Card Charges (`POST /api/v1/charges`)**: Accepts minor currency units (`int64`), verifies Luhn checksum, validates test card tokens, and prevents duplicate billing via HTTP `Idempotency-Key` caching.
 * **Balanced Double-Entry Bookkeeping**: For every payment, balanced debits and credits are executed atomically in PostgreSQL (`pgx.Tx`):
-  $$\sum \text{Debits} = \sum \text{Credits}$$
-  $$\text{ACQUIRING\_CLEARING (Debit)} = \text{MERCHANT\_PAYABLE (Credit)} + \text{PLATFORM\_FEE\_REVENUE (Credit)}$$
+  ```text
+  Total Debits = Total Credits
+  ACQUIRING_CLEARING (Debit) = MERCHANT_PAYABLE (Credit) + PLATFORM_FEE_REVENUE (Credit)
+  ```
 
 ### 2. Hosted Checkout Engine ("Pay with TyrFintech")
 * **Checkout Sessions (`POST /api/v1/checkout/sessions`)**: Generates secure checkout sessions with custom TTL, merchant fee split, and callback redirect URLs.
@@ -40,7 +42,7 @@ To explore the application without manual registration, use the pre-seeded crede
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 ### Backend
 * **Language & Runtime**: Go 1.26+
@@ -64,7 +66,7 @@ To explore the application without manual registration, use the pre-seeded crede
 
 ---
 
-## 🌐 Port Matrix & Local Infrastructure
+## Port Matrix & Local Infrastructure
 
 | Service | Host Port | Internal Port | URL / Access |
 | :--- | :--- | :--- | :--- |
@@ -79,7 +81,7 @@ To explore the application without manual registration, use the pre-seeded crede
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 ├── Makefile                     # Root developer task runner (make api, make web, etc.)
@@ -118,7 +120,7 @@ To explore the application without manual registration, use the pre-seeded crede
 
 ---
 
-## 🏁 Getting Started
+## Getting Started
 
 ### 1. Start Infrastructure via Docker
 
@@ -149,7 +151,7 @@ docker compose up -d --build
 
 ---
 
-## 🧪 Automated Testing & Verification
+## Automated Testing & Verification
 
 ### Unit & Service Tests
 
@@ -173,7 +175,7 @@ make test-checkout
 
 ---
 
-## 🔒 Production Deployment Checklist
+## Production Deployment Checklist
 
 When deploying to production:
 1. Set `ENV=production` in container environment variables.
@@ -184,6 +186,6 @@ When deploying to production:
 
 ---
 
-## 📄 License
+## License
 
 MIT License. Developed for technical demonstration, portfolio evaluation, and distributed systems pair-programming.
